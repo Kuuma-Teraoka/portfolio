@@ -1,0 +1,35 @@
+
+
+header{
+    width: 100%;
+    height: 100px;
+    background-color: #DF7919;
+    top: 0;
+    display: flex;
+}
+
+.button p{
+    margin-top: 20px;
+    margin-left: 50px;
+    width: 100%;
+    font-size: 50px;
+    color: aliceblue;
+}
+
+body{
+    margin: 0;
+    background-color:black;
+}
+
+
+.text {
+    color: aliceblue;
+    font-size: 45px;
+}
+
+video{
+    width: 100%;
+    height: 600px;
+    margin-top: 10px;
+}
+

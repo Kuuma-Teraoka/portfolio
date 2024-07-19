@@ -1,0 +1,193 @@
+　全てが上手くいった。ただ、ytdlpのバージョンが古いせいで一部の動画がダウンロードできなかったのと、フォルダ名に謎の空白がある。
+
+
+
+　shファイルのmkdirが上手くいかない。なぜかyoutube'$'\rというディレクトリができてしまう。調べてみるとどうやら改行コードによるものらしい。ここで復習しておく。
+CR-\r-0x0D
+LF-\n-0x0A
+　となっていて、
+mac:CR
+linux:LF
+win:CRLF
+　がosごとの改行コード。実際にバイナリを見てみるとたしかに改行が0D0Aになっていた。
+
+　改行コード変更プログラム。UTF-8については、mp3tagが使えず、自分でタグづけソフトを作ろうとした際に作ったwavというメモのファイルで、文字コードについて詳しく書いているのでそちらに移した。といってもいちいち開くのはめんどくさいので削除はせずこのままにしておく。最新のメモはwavなので注意。
+　英語はUS-ASCIIに同じだが、日本語は3バイト文字となっているのは前確かめた。どうやら意外と簡単で、
+00-7F:ASCIIと同じ1バイト文字
+80-BF:2以上バイト文字の2バイト目以降
+C0-DF:2バイト文字の開始バイト
+E0-EF:3バイト文字の開始バイト
+F0-FF:4バイト以上文字の開始バイト
+　で、㌠はe38ca0である。つまり、単純に0Aというバイトは改行コードの他にないのである。システム的には多バイトの2バイト目以降に入れても成り立つはずだが、実際は80-BFまでのバイトしか使われてない。つまり、単純にファイルを読み取っていって、0Dがあったらスキップするプログラムを作れば、winをlinuxに、macを改行なしにできる。もちろん、0Aにすれば、winをmac、linuxを改行なしにできる。逆はめんどくさいかも。だが、改行コードに悩んだのはこのシェルスクリプトが初めてなのでwinをMacやlinuxに変えられれば十分だと思う。
+
+　かなり仕様が変わった。以下に書いたことはある程度昔のことなのでログとして残しておく程度にする。詳しくはソースコードを見たほうがわかりやすいと思う。また、正規表現についてはlinuxコマンドで行う。
+　まず、c言語で
+/mnt/d/data/app/myapp/bmdl a.html youtube
+　で、youtubeのフォルダのとこだけを抜き出し、このファイルについて次のようにコマンドで置換を行う。
+<DT><H3 ADD_DATE="" LAST_MODIFIED=”">youtube</H3>
+<DL><p>
+　を、
+mkdir -p youtube && cd youtube
+　に、
+
+<DT><A HREF="https://" ADD_DATE="1688548980" ICON="">今日もdbd</A>
+　を、
+ytdl https://
+　に、
+
+<DL></p>
+　を、
+cd ..
+　にする。
+
+　基本的にはyoutubeフォルダを作りたい場所でこれらを実行し、youtubeフォルダに移動しダウンロードし、元の場所に戻る。
+　また、bmdl、置換、source bmdl.shの3つを同時に行うaliasを作る。これで一つのコマンドで全てが完了する。
+
+　bmdl.cと、sed.shはmyappに置く。また、ブックマークのファイルはc/tmpにある。基本、youtubeフォルダを作りたい場所で、
+bmdl c/tmp/bookmark.html youtube
+　と入力すると、
+app/bmdl c/tmp/bookmark.html youtube
+　で、bmdl.shをカレントディレクトリに出力し、
+sed… bmdl.sh
+sed… bmdl.sh
+sed… bmdl.sh
+　で、置換して、
+app/kut0D bmdl.sh
+　で0Dを消して改行コードをwinからlinuxに、
+source modified.txt
+　で、bmdl.shによってカレントディレクトリ内でいろいろな操作をし、カレントディレクトリに戻り、
+rm bmdl.sh
+　で削除したら終わり。
+
+
+
+
+
+
+
+
+/app/bookmark a.html  youtube
+　youtubeフォルダ内の全てをytdlするshファイル作成
+
+このフォルダが終わるまでのフォルダ構造を把握して、その中のurlを入手。
+
+基本的に、一つの文字列をメモリに用意して、それに応じて、その度にfileに出力。
+
+youtube</H3>までスキップ
+a</H3>で、mkdir a//cd a
+urlで、ytdl url
+</DL><p>で、cd ../
+youtubeの終わりで終わり。カウンタをメモリに用意して、cd aとcd ../でプラスマイナスで、マイナスに入ったら終了とするか。
+
+これは正規表現なので、オートマトンの教科書を読み直して、別の関数として書く。文字列と正規表現を渡すと、真理値と一部抜き出しを返す。返す変数は一つなので、抜き出した文字の文字列ポインタを与えるか、抜き出すポイントを一つだけとして、下の文字列を書き換えるか。
+
+
+
+
+
+
+
+
+
+
+
+　まずyoutubeまでスキップするのだが、fgetsで入手した文字列と、youtubeという文字列を引数として、前者にyoutube</H3>が存在したら0、しないなら1を返す関数findを作る。
+　あとは
+for(a="a" : find(a,argv) : a=fgets
+ if(a=eof)
+フォルダが存在しません
+return0
+でスキップできる。スキップ後はyotubeというのがlineに入っている。ここで、mkdirとcdを出力。
+　H3タグがフォルダ名にしかないはずだが、例外もあるかもしれないので注意。
+
+ここから、このyoutubeを読んでからの、フォルダ開始、終わりをそれぞれプラス、マイナスとして、初期値は1とするカウンタを用いて、ループを行う。youtubeのなかにa,b,cがあり、aのなかにdがあれば、1,2,3,2,1,2,1,2,1,ときて、youtubeのフォルダが終わる時0になる。このループがこのプログラミングの本体。
+
+　ループ内。
+
+a</H3>があれば、mkdirとcdを出力。aを抜き出す必要がある。文字列に対し
+
+
+
+
+
+
+
+
+
+fgetsで最後まで読めるだろうか。文字列の背後にヌルコードがない場合、このプログラムは一気に壊れる。であれば、aが128までならa128に文字が入っていたら終了というようにするか。ffgetsを作って解決。みた方がわかりやすい。
+
+
+
+
+
+
+mkdirはすでに存在していたらエラーが出て作らない。mkdir -p aで、もしaが存在していてもエラーを出力しない。というより、何もしない。というコマンドになる。
+
+ふと、ダウンロードするフォルダとブックマークファイルの場所同じだとめんどくさいと思い、絶対パスに対応させることに成功した。sumStringで/から始まる場合に入力されたやつをそのままsumに入れるだけだが。動作確認済み。
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+　さて、早速作ってみる。試作3号まであったがめんどくさいので読まずに新しく作る。
+
+<!DOCTYPE NETSCAPE-Bookmark-file-1>
+<!-- This is an automatically generated file.
+     It will be read and overwritten.
+     DO NOT EDIT! -->
+<META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=UTF-8">
+<TITLE>Bookmarks</TITLE>
+<H1>Bookmarks</H1>
+<DL><p>
+
+</DL><p>
+
+　から始まり、<DL><p></DL><p>の間には、フォルダかurlが入る。フォルダは、
+
+<DT><H3 ADD_DATE="1685512746" LAST_MODIFIED="0">LIFE</H3>
+<DL><p>
+
+</DL><p>
+
+　で、<DL><p></DL><p>の間には、フォルダかurlが入る。ルートディレクトリのようなBookmarksフォルダはH1であるのに対し、普通のフォルダはH3とDTとよくわからないtagがつくことに注意。urlは、
+
+<DT><A HREF="https://maps.google.com/" ADD_DATE="1633023988">マップ</A>
+
+　である。フォルダの中に１つだけurlが入っていると、urlと勘違いし、なんで違う形式なんだろうとなってしまうので注意。また、なぜか、
+
+<DT><A HREF="https://xn--pckua2a7gp15o89zb.com/jb/c0d0cf0a2849934bed2224a8bc6a76fc" ADD_DATE="1643757965" ICON="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAIAAACQkWg2AAAB2UlEQVQ4jWVSTWsUQRSs6u7N7DrZbLKTnDQqfoRE0JNRRCGC5+hVvOvNgz9EBRH8FVF/gIIIHjwEFMSDiPEDE92YZHU/MTOvPMzuZIPv0DSv671X/aooCftDEklJBEAWSQAEmd8K0GhlX/a0tdm2dCGKL1YmBZAI+RtJASQBmJkBjvydpbc23rf/dm/UZy8dmsrMHOD2aACSJDkykI50RBw8gi97h2G7UPAr+PRMf1LzRJn+0eRCK0vnKgckUaBjkEDSzEhmkief/Ord/rBVCe7h4dqDle1PP3vXzyXnr9YEUAjFV01IBQfspNl2ZxfBNVNbbXRa652PzZikzASGnDxJR3oQwNnx6M7RxHuerkY3F6cbJ6tLczUAjsy3JAGOuPdi/c2X9rHp+MpSBVMbBkTx7N1rR0bEAcCgASP3+F3z1ermieP16uLE/cYawAuV5FSpmkqecDmcCvmyBM0n0beD8ZmZct2XkigOcOMukHAAhzuVQDMJovRyq/+1l9bH/OWZqKOMwoQvjQ2tUeiLzCwzk9ny2x94tjb/+ns/zWQmk8zMTFJ+DmSFBpJ1M2HXupmZZFIGWeHCkTk0MwEEnu/0P/fTpOSWk4ofReyvYT6osMqek//rncc/etMYgA6g+NcAAAAASUVORK5CYII=">求人ボックス｜数学模擬試験の求人詳細情報 - 東京都</A>
+
+ICON="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAIAAACQkWg2AAAB2UlEQVQ4jWVSTWsUQRSs6u7N7DrZbLKTnDQqfoRE0JNRRCGC5+hVvOvNgz9EBRH8FVF/gIIIHjwEFMSDiPEDE92YZHU/MTOvPMzuZIPv0DSv671X/aooCftDEklJBEAWSQAEmd8K0GhlX/a0tdm2dCGKL1YmBZAI+RtJASQBmJkBjvydpbc23rf/dm/UZy8dmsrMHOD2aACSJDkykI50RBw8gi97h2G7UPAr+PRMf1LzRJn+0eRCK0vnKgckUaBjkEDSzEhmkief/Ord/rBVCe7h4dqDle1PP3vXzyXnr9YEUAjFV01IBQfspNl2ZxfBNVNbbXRa652PzZikzASGnDxJR3oQwNnx6M7RxHuerkY3F6cbJ6tLczUAjsy3JAGOuPdi/c2X9rHp+MpSBVMbBkTx7N1rR0bEAcCgASP3+F3z1ermieP16uLE/cYawAuV5FSpmkqecDmcCvmyBM0n0beD8ZmZct2XkigOcOMukHAAhzuVQDMJovRyq/+1l9bH/OWZqKOMwoQvjQ2tUeiLzCwzk9ny2x94tjb/+ns/zWQmk8zMTFJ+DmSFBpJ1M2HXupmZZFIGWeHCkTk0MwEEnu/0P/fTpOSWk4ofReyvYT6osMqek//rncc/etMYgA6g+NcAAAAASUVORK5CYII="
+
+というICONタグがついたものがあった。
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+　エイリアスにshコマンドの実行まで含める。profileにsource /home/hermes/app/myapp.shとでもして、そこにkutwavのエイリアスと、このエイリアスを入れるのもいいかもしれない。
+　ytdlのshコマンドの実行の前にちゃんとこのプログラムが終了しているようにして、このプログラミングの最後で、ダウンロードを開始しますか、というのを入れよう。
+
+
+
+

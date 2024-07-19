@@ -1,0 +1,17 @@
+　エクセルのxlsxをcsvに変換するコード。そもそもエクセル自体、個人では使う予定はなく、本来であればウェブサイトを自作して、そこから情報を収集すべきである。なので、今後使うことはないかもしれないがメモをしておく。
+
+　pythonで実装。
+
+pip install pandas openpyxl
+　これで、ライブラリをインストール。これで、スクリプトを実行、つまり、
+python3 convert_xlsx_to_csv.py input.xlsx output.csv
+　とすれば変換できる。
+
+　pythonのバイナリ化について、
+pip install pyinstaller
+　でインストールして、
+pyinstaller --onefile convert_xlsx_to_csv.py
+　で、バイナリを作れる。カレントディレクトリにdistディレクトリなど、いくつかのディレクトリやファイルが生成されるのであまり好きではない。バイナリファイルはdistの中にある。
+　もちろんこれをmybinにいれればコマンド化できる。
+
+　javaで書き直したい。pythonは情報系でない学生が機械学習を学ぶ時とかに使うもので、私はjavaをつかうべきだ。
