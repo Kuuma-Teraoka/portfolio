@@ -1,0 +1,2680 @@
+
+　pythonのメモ。
+
+
+　
+
+
+
+
+　type()。
+x = 42
+y = 3.14
+z = "hello"
+print(type(x))  # <class 'int'>
+print(type(y))  # <class 'float'>
+print(type(z))  # <class 'str'>
+
+
+　id()。
+a = 0.0
+b = 0.0
+print(id(a))  # aのメモリアドレスを表示
+print(id(b))  # bのメモリアドレスを表示
+
+
+
+　sys。
+
+　sys.getsizeof()。
+import sys
+x = 1
+s = "hello"
+lst = [1, 2, 3]
+print(sys.getsizeof(x))
+print(sys.getsizeof(s))
+print(sys.getsizeof(lst))
+
+　sys.append?->ライブラリのパスとこ。
+
+　sys.argv。使いすぎてあたりまえになっていたがメモはなかった。
+　sys.argvはコマンドライン引数をstrのlistにしたもの。
+len(sys.argv)
+　でC言語のargcを取得できて、
+sys.argv[3]
+　でC言語のargv[1]を取得できる。
+
+
+
+
+
+
+
+
+　変数のバイナリを表示する方法について探ったが、c言語のようなメモリ確保ができるライブラリを使って定義した変数だけ見られるだけで、pythonが内部的に確保したメモリについては表示できないようだ。いや、一応以下の方法が見つかったが、上手くいかなかった。泣きそう
+
+　Python には、オブジェクトのガベージコレクション（メモリ管理）に関する情報を提供する gc モジュールもあります。これを使うことで、オブジェクトの参照カウントやトラッキングされているオブジェクトを調査できます。
+import gc
+a = 3
+print(gc.get_referents(a))  # 'a' が参照している他のオブジェクトを表示
+　ただし、gc モジュールはオブジェクトのメモリレイアウトそのものを調査するというよりは、Python のガベージコレクションによるオブジェクト管理の詳細を調査するためのものです。
+　memoryview を使うと、オブジェクトのメモリ表現を直接参照できます。これは、特にバイナリデータやバッファの内容を確認したいときに便利です。
+a = 3
+b = memoryview(bytearray(a.to_bytes(8, byteorder='little')))
+print(b.tolist())  # メモリ上のバイト列をリストとして表示
+　でもメモリの中身みれなかった気がする。
+
+　これができれば、クラスのメモリ構造がわかるので、クラス変数でメモリ使用量をつくることができるので、そこまでやりたい。
+
+
+
+
+
+
+　計算時間計測とメモリ使用量表示。
+
+　計算時間は、
+import time
+start = time.perf_counter()
+end = time.perf_counter()
+print(f'{end - start} [sec])
+　で表示できる。
+
+　メモリ使用量は、
+import tracemalloc
+tracemalloc.start()
+# 処理
+print(f"current memory usage: {tracemalloc.get_traced_memory()[0] / 1024 / 1024} [MB]")
+print(f"peak memory usage: {tracemalloc.get_traced_memory()[1] / 1024 / 1024} [MB]")
+　で表示できる。
+>>> type(tracemalloc.get_traced_memory())
+<class 'tuple'>
+>>> type(tracemalloc.get_traced_memory()[0])
+<class 'int'>
+>>> type(tracemalloc.get_traced_memory()[1])
+<class 'int'>
+　であり、(current, peak)という順に今の使用量と、おそらくstart()してからpeak時の使用量が得られる。
+
+
+
+
+
+　subprocess。シェルコマンドを実行するコマンド。os.system("ls -l")でもシェルコマンドは使えるが標準出力を取得できないので、subprocessが推奨とのこと。
+
+import subprocess
+result = subprocess.run(["ls", "-l"], capture_output=True, text=True)
+print("標準出力:", result.stdout)
+print("標準エラー:", result.stderr)
+print("終了コード:", result.returncode)
+　というように使う。
+text=True: 出力を文字列として扱う。Trueを指定しない場合、バイナリ形式になる。
+capture_output=True: 標準出力と標準エラーをキャプチャ。result.stdout, result.stderr, result.returncodeが使えるようになる。
+
+　また、["ls", "-l"]というようにリストとしてコマンドを指定するのは、シェルの空白区切りであるゆえにエスケープやらがややこしくなる問題を解決していてつかいやすいのだが、それでも空白区切りで指定したい場合は、shell=Trueにするとできる。パイプを使う場合は、
+subprocess.run(["ls", "-l", "|", "grep" "abc"])
+　だと、lsの引数に"-l", "|", "grep" "abc"が与えられてしまうので、shell=Trueで、
+subprocess.run(["ls -l | grep abc"], shell=True)
+　とする必要がある。
+　
+
+
+
+
+
+
+
+
+
+　os。ディレクトリを探索したりできる標準パッケージ。
+
+　os.path.expanduser("~")で、"/home/lucifer"という文字列が得られる。末尾に/ついていないので注意。
+
+rand_dir = os.environ['RINDFILE_PATH']
+　で、環境変数をstrとして取得できる。環境変数がないと、
+Traceback (most recent call last):
+  File "/home/lucifer/d/software/handmade/python/rm.py", line 12, in <module>
+    dump_dir = os.environ['DUMP_PAT']
+  File "/usr/lib/python3.10/os.py", line 680, in __getitem__
+    raise KeyError(key) from None
+KeyError: 'DUMP_PAT'
+　というエラーになるので、エラーハンドリングはなくていいと思う。
+
+
+　os.walk()。
+for current_dir, sub_dirs, files in os.walk(sys.argv[1]):
+    print("current dir:", current_dir, "sub dirs:", sub_dirs, "files:", files)
+　を実行すると、
+current dir: ./ sub dirs: ['bone_yard', 'esn', 'google_form', 'lib_py_handmade', '__pycache__'] files: ['auth.py', 'dircmp.py', 'log.py', 'model.py', 'numpy.txt', 'python.txt', 'webhook.py', 'xlsx.py', 'xor.py']
+current dir: ./bone_yard sub dirs: [] files: ['gpt.py', 'xlsx_to_pdf.py']
+current dir: ./esn sub dirs: ['grid', 'new'] files: ['500_example.sh', 'bayesian.py', 'colored_confusion_matrix.gp', 'confusion_matrix.py', 'deduce_causal_dependencies.py', 'example_1.sh', 'example_a.sh', 'fig_2_c.gp', 'fp_fpr.py', 'f_va
+lue.py', 'gen_akl.py', 'gen_hk.py', 'gen_loz.py', 'gen_parameters.py', 'model_a.py', 'nrmse.py', 'print_matrix.py', 'ryan01.sh', 'ryan03.sh', 'ryan05.sh', 'sort_matrix.py', 'time_series_output_comparison.gp', 'variance.py']
+current dir: ./esn/grid sub dirs: [] files: ['colored_confusion_matrix.gp', 'colored_confusion_matrix.pdf', 'colored_confusion_matrix.png', 'colored_confusion_matrix_2.gp', 'confusion_matrix.dat', 'confusion_matrix_2.dat', 'grid.txt']
+current dir: ./esn/new sub dirs: [] files: ['colored_confusion_matrix.gp', 'deduction.py', 'esn.py', 'fig_2_c.gp', 'fp_fpr.py', 'f_value.py', 'lorenz.py', 'main.py', 'nrmse.py', 'print_matrix.py', 'sort_matrix.py', 'time_series_output_co
+mparison.gp', 'variance.py']
+current dir: ./google_form sub dirs: ['summer'] files: ['addusr.py', 'gen_form.py', 'google_form.txt', 'ls_form.py', 'read_form.py', 'reset_rmall_form.py', 'responses.csv', 'rm_form.py']
+current dir: ./google_form/summer sub dirs: [] files: ['add_user_all.sh', 'all.csv', 'convert.sh', 'create_item_1.txt', 'create_item_2.txt', 'create_item_3.txt', 'create_item_4.txt', 'create_item_all.txt', 'merged_presentation_titles.csv
+', 'oral_a.csv', 'oral_a.py', 'oral_b.csv', 'oral_b.py', 'poster_a.csv', 'poster_a.py', 'poster_b.csv', 'poster_b.py', 'poster_c.csv', 'poster_c.py', 'poster_d.csv', 'poster_d.py', 'summer.txt']
+current dir: ./lib_py_handmade sub dirs: ['__pycache__'] files: ['bmp.py', 'matrix.py', 'ndarray.py', 'progress.py', 'rand.py', 'strings.py']
+current dir: ./lib_py_handmade/__pycache__ sub dirs: [] files: ['matrix.cpython-310.pyc', 'ndarray.cpython-310.pyc', 'progress.cpython-310.pyc', 'rand.cpython-310.pyc', 'str.cpython-310.pyc', 'string.cpython-310.pyc', 'strings.cpython-31
+0.pyc']
+current dir: ./__pycache__ sub dirs: [] files: ['model.cpython-310.pyc', 'test.cpython-310.pyc']
+　こんな感じになる。長いので、実験用dirをつくって、そのメモにしたほうがいいかも。
+
+　os.path.join()。
+os.path.join(current_dir, file_name)
+　で、
+current_dir/file_name
+　になる。str.__add__()を使って、
+current_dir + '/' + file_name
+　でいいじゃんとGPTに聞いたところ、windowsは\が区切り文字なのでwindowsで使えなくなってしまうが、os.path.join()はosに合わせて\や/を切り替えてくれる、とのことだった。んーwindowsはつかわないので、わかりやすさのために+のほうにする。
+　いや、os.walk()をみるとわかるが、./だけ/がついてて、./esnは/がついていない。str.endswithつかって処理する必要がある。
+
+　os.path.exists()。C言語では、
+FILE *file = fopen("a.txt", "r")
+if (file != NULL)
+　というように、fopenしてNULLかどうかで判別するのが一般的な方法だが、pythonでは、
+if os.path.exists("file.txt"):
+    print("File exists.")
+else:
+    print("File does not exist.")
+　というようにする。ただ、これだと
+>>> os.path.exists("boneyard_esn")
+True
+　というようにディレクトリもTrueになってしまう。そこで、
+if os.path.isfile("file.txt"):
+    print("File exists and is a file.")
+else:
+    print("File does not exist or is not a file.")
+　というようにすると、ファイルに限定して存在を確認できる。同様にos.path.isdirもある。
+
+　os.listdir()。これはディレクトリを受け取って、その中にあるファイルやディレクトリのstrのlistを返す関数。
+files = os.listdir()
+　というように引数になにも与えないと、カレントディレクトリの中身を表示してくれる。os.walkとの違いはサブディレクトリまで再帰的に探索するかしないか。
+
+　os.stat("a.txt")。これでls -lで表示されるパーミッション、所有者、所有グループ、サイズ、タイムスタンプなどの情報が得られる。
+>>> a = os.stat("other.txt")
+>>> a
+os.stat_result(st_mode=33279, st_ino=27656192674, st_dev=86, st_nlink=1, st_uid=1000, st_gid=1000, st_size=10712, st_atime=1729931556, st_mtime=1729931556, st_ctime=1729931556)
+>>> type(a)
+<class 'os.stat_result'>
+>>> a.st_mode
+33279
+>>> a[0]
+33279
+　という感じでつかう。返すのはos.stat_resultというクラスのインスタンスであるが、内部的にはtupleになっているらしい。インスタンス変数でそれぞれの要素を参照できるようになっているが、[0]というようにアクセスすることも可能。これはtupleというより、os.stat_resultの__getitem__()だが。
+
+　見てわかるとおり、パーミッションが33279と意味不明な整数になっている。どうやら、755は3bit3bit3bitなわけでこのバイナリをそのままintとして解釈するとその数字になるらしい。755という文字列を取得するには、
+st_mode = os.stat(saved_files)[0]
+st_mode & 0o777
+　で下位9bitだけにして、
+oct(st_mode & 0o777)
+　で8進数表記の文字列の'0o755"に変換できる。あとは、[2:]とすれば"755"とできる。また、
+>>> import stat
+>>> stat.filemode(a[0])
+'-rwxrwxrwx'
+　というように、statというライブラリのmethodを使うと"drwxrwxrwx"に変換してくれる。strなので[1:]にすればdの部分を消せる。
+
+
+　またst_uidが所有者だがidである1000になっている。これからluciferというstrを得るには、
+>>> import pwd
+>>> pwd.getpwuid(a[4])
+pwd.struct_passwd(pw_name='lucifer', pw_passwd='x', pw_uid=1000, pw_gid=1000, pw_gecos=',,,', pw_dir='/home/lucifer', pw_shell='/bin/bash')
+>>> type(pwd.getpwuid(a[4]))
+<class 'pwd.struct_passwd'>
+　というようにpwdというライブラリのgetpwuid()というmethodを使う。これが返すのはpwd.struct_passwdというクラスのインスタンスで、このうちpw_nameというインスタンス変数がluciferというstrになっている。なので、
+pwd.getpwuid(a[4]).pw_name
+　でluciferというstrが得られる。おそらくos.stat_resultと同じtupleのような構造担っていると思う。
+
+　st_gidも同様に、grpというライブラリを使う。pwdと似ていて、
+grp.getgrgid(a[5]).gr_name
+　でluciferというグループ名のstrが得られる。
+
+　sizeを示すst_sizeはそのままbyte単位。
+
+　タイムスタンプであるst_mtimeもよくわからない整数になっている。mtimeのほかにもctimeやatimeがあるが、おそらくcreate timeとa..なんだろう。後で調べる。
+time.strftime('%Y-%m-%d %H:%M', time.localtime(item_stat.st_mtime))
+　というようにtimeライブラリでstrに変換できる。
+
+rand_dir = os.environ['RINDFILE_PATH']
+　で環境変数をstrで返す。見つからないと、
+>>> os.environ['RAND']
+Traceback (most recent call last):
+  File "<stdin>", line 1, in <module>
+  File "/usr/lib/python3.10/os.py", line 680, in __getitem__
+    raise KeyError(key) from None
+KeyError: 'RAND'
+　というエラーを返す。
+
+
+
+
+
+
+
+
+　copy。copy_matrixを作ろうと思ったのだが、matrix限定ではない、メモリ領域のバイナリをそのままコピーして、そのポインタをvoid *型で返すものを作ればより汎用的な関数になると思う。ポインタとbyteを受け取って、コピーして返す関数。C言語で後で作ろう。
+　pythonではライブラリとしてすでにある。バイナリを操作する以上、C言語のapiを使わないと自作できないが、C言語で作れればpythonのライブラリを使ってもいいという縛りプレイがあるのと、単純に関数名や使い方が参考になるので、ライブラリについてまとめる。
+>>> import copy
+>>> from matrix import Matrix
+>>> mat = Matrix(3,4)
+>>> cop = copy.copy(mat)
+>>> dec = copy.deepcopy(mat)
+>>> id(mat), id(mat.row), id(mat.col), id(mat.matrix)
+(139762123539840, 139762124128560, 139762124128592, 139762122384832)
+>>> id(cop), id(cop.row), id(cop.col), id(cop.matrix)
+(139762122821488, 139762124128560, 139762124128592, 139762122384832)
+>>> id(dec), id(dec.row), id(dec.col), id(dec.matrix)
+(139762119921472, 139762124128560, 139762124128592, 139762119827712)
+　という感じ。
+mat2 = copy.copy(mat)
+mat3 = copy.deepcopy(mat)
+　の二つがある。まず、copyについて。matrixがrow(float), col(float), matrix(list)の3つのvoid *型のバイナリで構成されている。
+　まあ、実際はこれにobject名"Matrix"が加わっている故、type(mat)でMatrixが返ってくるわけで、これによって、関数に与えたときにデータ型によって処理を変えることができるわけだが。
+　とにかくこのvoid *型の3つのバイナリを別のメモリにコピーして、そのポインタ、つまり新しいオブジェクトを返すのがcopy。
+　ただ、この場合、rowとcolは不変オブジェクトなので同じメモリを参照していても、書き換えが起こらない、というかメモリを再利用するために同じメモリのほうがいいまであるのだが、matrix(list)については問題が起こる。中身はvoid *の配列だが、これがcopy前のほうで書き変わると、copy後のほうも書き変わってしまう。
+　よって、matrixないにあるlistのような可変オブジェクトの場合は、ちゃんとそれも別のメモリを確保して中身のvoid *をコピーする必要がある。これができるのがdeep copyで、おそらく再帰的にstr, int, floatなどの不変オブジェクトになるまでcopyを繰り返すのだろう。
+
+>>> mat2 = copy.deepcopy(mat)
+>>> id(mat), id(mat.row), id(mat.col), id(mat.matrix), id(mat[0,0])
+(139635600849792, 139635602473264, 139635602473264, 139635583594752, 139635580014080)
+>>> id(mat2), id(mat2.row), id(mat2.col), id(mat2.matrix), id(mat2[0,0])
+(139635601166192, 139635602473264, 139635602473264, 139635580011584, 139635580011008)
+　より、Matrixという構造体の、matrixというlistの、[0,0]にまた新しいlistを入れてみた。まあつまり、二重ではなく3重にしたところ、ちゃんとそれも違うメモリにコピーしている。不変オブジェクトがくるまで繰り返すのだろう。
+　str, float, intがlist, tuple, set, dictやクラスという名の構造体など形作る基本のバイナリ構造なのだろう。byteもあるだろうが、結局wavの音声データもintだし、RGBも3つのintだし。すべてそう。
+
+
+
+
+
+
+
+
+　インデント方式。
+　C言語をずっと使っていればいずれ、
+for(int i = 0 ; i < 3 ; i++)
+{
+    printf(...) ;
+    printf(...) ;
+}
+　や、
+for(int i = 0 ; i < 3 ; i++)
+    printf(...)
+　のように、forやifの部分だけ字下げして、1つだけなら{}なし、2つ以上なら{}で囲うようになる。逆に、字下げ部分はfor, ifだけになる。
+　こうなると{}より、字下げによって範囲を定めたほうがいいじゃんというのがpythonの字下げ。
+
+
+
+
+
+　i++。
+　pythonにはi++はない。i += 1はある。i++とするなら、i+=1でよくねということなのかな。chatGPTに聞いてみた。
+
+簡潔さと明快さ: Pythonはコードの明快さを重視する言語です。i += 1 は変数をインクリメントすることを明示的に表現しており、i++ よりも可読性が高いとされています。また、++i や --i などが存在すると、前置と後置の違いを覚えたり理解する必要がありますが、Pythonはこうした複雑さを避けています。
+
+変数はオブジェクトであり、数値は不変オブジェクト: Pythonでは変数はオブジェクトへの参照であり、整数や浮動小数点数のような基本的なデータ型は不変オブジェクト（Immutable）です。i++ のように変数自体を直接変更するという考え方は、Pythonのオブジェクトモデルと相容れない部分があります。
+
+　たしかに、javaやC言語, C++のプリミティブ型にはi++は意味をなすが、pythonはすべて参照型、つまりオブジェクトなので、i += 1で、i = i + 1とするのが正しい。iがたまたまintを相手にした__add__が定義されているからこれが使えるわけで、i++まで作る必要はないだろう。
+
+
+
+
+
+
+　if。
+if x > 0 and (y < 5 or z == 10):
+    # 処理
+else:
+    # 処理
+　という感じ。{}をインデントにするのはpython全体をみればわかる。()も必要ないので消して、ifと:の間が条件文。!, &&, ||をnot, and, orにしていて、これらを予約語としている。このメリットはスマホのようなキーボードでもプログラミングが行えることくらいだろうか。
+or(||) < and(&&) < not(!) < is, ==, !=, <, >, <=, >= < ()
+　という優先順位らしい。()は()のところを優先して結合するという意味。!はnotだが、!=は!=のままなので注意。
+
+a == b
+　としたとき、a, bにはポインタが入っているので、同じポインタなら1、違うポインタなら0ということなのだろうか。int, double, strのような不変オブジェクトで、メモリの再利用が成功していれば上手くいものの、たとえばdoubleでメモリの再利用が上手くいかず、aには3.0、bにも3.0が入っていても、それぞれの3.0が同じメモリになければ違うとみなされて0になってしまいのだろうか。
+　どうやらポインタではなく、ちゃんとその中身のバイナリを比較してくれるらしい。ちなみに==はオブジェクト中身のバイナリ比較だが、isという演算子もあり、こちらはポインタの比較になるらしい。一応上にも加えておいた。
+>>> a = 3.0
+>>> b = 3.0
+>>> id(a), id(b)
+(140107302725392, 140107302718384)
+>>> a is b
+False
+>>> a = [1.0, 1.0]
+>>> id(a[0]), id(a[1])
+(140107302725456, 140107302725456)
+>>> a[0] is a[1]
+True
+　という感じ。
+　==でバイナリ比較がおこなわれるのは、intやfloatで__eq__が定義されているかららしい。これについては、クラスの__add__などのオーバーロードのところを参照。
+
+　さて、さらに論理演算子とifについて掘り下げる。TrueとFalseはboolオブジェクトのリテラル表記である。
+>>> a = True
+>>> type(a), a
+(<class 'bool'>, True)
+　ifはこのboolオブジェクトを受け取って、Trueなら実行、Falseなら何もしない。C言語では式の値が0であるかどうかだったので、やはりオブジェクト指向とバイナリ指向のちがいだろう。あとで、C言語でNULLも使えるか試す。
+　a == bとしたときにa.__eq__(b)がboolオブジェクトをreturnするので、それがifに渡されて動いているわけだ。
+　or(||) < and(&&) < not(!) < is, ==, !=, <, >, <=, >= < ()のうち、==, !=, <, >, <=, >=は__eq__, __ne__, __lt__, __gt__, __le__, __ge__で定義できる。
+　isは任意のオブジェクトに対し、いや、ここではオブジェクトのポインタ変数というべきか、なのでポインタ変数に対し、同じポインタならTrue、違ければFalseのboolオブジェクトを返す。
+　or, and, notは二つのboolオブジェクトに対し、boolオブジェクトを返すものだ。
+
+if "abc"
+　というようにifやor, and, notに任意のオブジェクトを渡しても機能するのは、クラスで__bool__()というインスタンスmethodが定義されているからである。また、もし定義されていない場合は、__len__()を呼び出して、0ならFalse、そうでないならTrueとして扱う。クラス参照。
+
+if a = len(b):
+　とすることはできず、
+if a := len(b):
+　とする必要がある。C言語では(a=1)という式も値を持っていたが、pythonでは=は値を持たず、:=は値をもつようになっている。また、
+if a := len(b) != 3:
+　とすると、:=より!=が優先されるので、len(b) != 3が返すTrueあるいはFalseがaに入るようになる。len(b)をaにいれてから!=3で評価したいのであれば、
+if (a:= len(b)) != 3:
+　とする必要がある。
+
+　all()とany()。
+any(isinstance(i, (list, tuple)) for i in data)
+all(isinstance(i, (list, tuple)) for i in data)
+　というように使う。これはlistのリテラル表記にある、
+a = [i for i in data]
+　ににているが、これが返すのはTrueまたはFalseであり、
+isinstance(i, (list, tuple)) for i in data
+　が
+True, True, False, True, ...
+　という配列になっていて、allならすべてTrue、anyならひとつでもTrueであるときに、Trueになる。
+
+
+
+
+
+
+
+
+
+
+
+
+　try-catch構文。raiseとtry-except。javaでいうthrowとtry-catch。
+
+def example_function():
+    raise ValueError("An error occurred")  # ここで例外を発生させる
+    print("This line won't be executed")   # この行は実行されない
+try:
+    example_function()
+except ValueError as e:
+    print(f"Caught an exception: {e}")     # ここに制御が移る
+
+　エラーハンドリングのための構文で、C言語でのエラーハンドリングでは、単純に、
+if(制約条件を満たさないとき)
+{
+    fprintf(stderr, "multiply_matrix(): c->row != a->row || a->col != b->row || b->col != c->col\n") ;    
+    exit(EXIT_FAILURE) ;
+}
+　としていた。制約条件を満たさないなど、想定外の状態、つまり例外が起きたときに毎回このようにするのではコードに冗長性がある。さらに言えば、エラーメッセージを変えるときに、すべての関数のエラーメッセージを手作業で変える必要がでてくる。
+　といっても、エラーメッセージは、関数名:ifの条件文、という構成なので、私の場合はそうでもないのだが。まあpythonのエラーは毎回関数名が表示される仕様なので、やはりpythonでのtry-exceptのほうがいいかも。
+　そこで、pythonでは次のようなtry-except構文を使ってエラーハンドリングを行う。mainでmethodA, AでB、BでC、Dと関数でさらに関数を呼び出しているような状態で、Dでraiseがくると、D, C, B, A, mainと戻っていき、プログラムが終了する。この際、たとえばAで、
+try:
+    methodB()
+except ValueError as e:
+    # 処理
+　というような感じで、tryの中でmethodBが呼び出されていて、かつexceptの引数にDでのraise時に指定したエラーオブジェクトが含まれていればexceptの#処理に移る。逆に、tryの中に関数呼び出しが含まれていない場合や、含まれていてもexceptで指定された例外オブジェクト出ない場合は、exceptの処理に移らず、呼び出し元の関数に戻り、これを繰り返す。
+　ifで例外を検知して、exit()すればいいのに、なぜ、raiseして、ちがうところでcatchするのでしょう。と質問したら、いい質問です！と言われた。chatGPTの一番の誉め言葉だと思う。これはjavaでのtry-catch構文、pythonでのtry_except構文について、Cのif-exitでいいのではという質問だが、まず、冗長性がなくなること、そしてなにより関数伝播が強力だからという答えが返ってきた。冗長性に関しては、毎回fpintfとexitを書くのが冗長であるということだが、これは関数を作ればまあ解決できる。問題は関数伝播で、前にkutwavやyahooのプログラミングテストとかで、エラーが起きたときにエラー番号を引数書き換えで返して、それにしたがって呼び出し元の関数で処理するということをしていた。単にexitだと、例外からの復帰はできない。しかし、try-exceptではtry-exceptを書かなければexitになり、try-exceptを書けば例外復帰ができる。
+　これをC言語で実装する場合、おおまかな流れとしては、まず戻り値は複数でもtupleという一つのオブジェクトが返るとして見られるので、void *methodと書けるわけで、返ってくるのがNULLのときになんらかのエラーがあるとする。そして、エラーのときにstatic変数に例外オブジェクトをいれて、ひたすらNULLで元の関数に再帰的に戻り続けて、もし戻った関数のうちどこかでstaticに関数エラー処理があればそこに移る。
+
+　以下、例外クラスの一覧
+ValueError: 値が間違っているときかな。
+TypeError: 引数や操作の型が正しくない場合に使います。例: 数値型と文字列型の加算など。
+IndexError: シーケンス（リストやタプル）のインデックスが範囲外の場合に使います。
+KeyError: 辞書に存在しないキーにアクセスした場合に使います。
+FileNotFoundError: 存在しないファイルを開こうとしたときに使います。
+ZeroDivisionError: 数値をゼロで除算しようとした場合に使います。
+AttributeError: オブジェクトが存在しない属性を参照しようとした場合に使います。
+RuntimeError: 一般的な実行時エラーのために使います。
+NotImplementedError: 実装が意図的にされていないメソッドや関数に対して使います。これは抽象クラスなどで使われることが多いです。
+
+　さて、具体的なtry-except構文の使い方をまとめる。
+try:
+    # エラーが発生する可能性のあるコード
+except SomeException:
+    # エラーが発生した場合の処理
+else:
+    # エラーが発生しなかった場合の処理
+finally:
+    # エラーの発生有無に関わらず必ず実行される処理
+　となっている。わかりやすい。except文は、
+except ValueError as e:
+　というように例外オブジェクトを指定して受け取るが、
+except Exception as e:
+　とExceptionを指定すれば任意のオブジェクトを受け取れる。また、as eはeという変数にエラーオブジェクトを代入するという意味である。import文のasのような、ただの名前の省略ではないことに注意。実際、
+print({e})
+　でエラー文を出力できるが、except Exception:として、
+print({Exception})
+　としても、
+{<class 'Exception'>}
+　と出力されるだけである。Exceptionはただのクラスであり、except文でcatchするエラーオブジェクトのクラスを指定しているだけに過ぎないのだから。
+
+
+
+
+
+
+　isinstance()。
+　listのところとクラスmethodと静的methodのところを参照。list()はイテラブルなオブジェクトならなんでもlistに変換できるlistのコンストラクタだが、引数のvoid*がなんのオブジェクトなのか関数内で条件分岐して処理しているわけで、その際に必要になるのがisinstance()である。
+
+isinstance(vector_list, list)
+　で、vector_listがlistであればTrue、でなければFalseのboolオブジェクトを返す。
+
+　ここで、"list"ならわかるのだが、listを与えているのに違和感を感じた。listという変数はどこにもないからである。どうやら、クラスを引数に与えることができるらしく、
+>>> def method(a, b, c):
+...     d = a(b,c)
+...     return d
+... 
+>>> a = method(matrix.Matrix, 3, 3)
+　としてもエラーがでなかった。クラスを引数に与えられるというのはなんだか気持ちわるい気もする。classmethodと静的methodの違いのところで、classmethodでもたしかにclsというクラスの引数があった。
+　だが、これの使いどころはあるのだろうか。どうせクラスごとにmethodがちがうので、関数内でmatrix()というようにしたほうがいい気もする。これの使いどころについて、次の文章がわかりやすい。
+　Pythonでは、クラス自体を引数に取ることで柔軟な設計が可能ですが、クラスによっては異なるメソッドや属性を持つ場合もあるため、クラスが提供するインターフェースが統一されている場合（例: 共通のメソッドを持っている場合）にはこの設計が有効です。ただし、クラスごとに異なる処理が必要な場合や、クラスが異なるメソッドや属性を持っている場合には、クラスを直接使った方がコードの安全性や可読性が高くなります。
+
+
+
+
+
+
+
+　pythonはインタープリタ言語であり、Rのように
+$ python
+>>> a = 3 * 5
+>>> a
+15
+　というようにターミナルで1行ずつ実行できるインタラクティブモードがある。これは意外と便利で、スマホで電卓を使う代わりにsshで自宅の高性能なPCに接続し、簡単なコマンドで計算が行える。ちなみに、
+$ python gen_parameta.py
+　というようにしてファイルをコンパイルして実行するのはスクリプトモードという。問題はインタラクティブモードとスクリプトモードで少しだけ文法が異なる点である。
+　まず、aと入れるだけで中身がprintされるのはインタラクティブモードだけ。スクリプトモードだと何も起こらない。そして、スクリプトモードだと、
+def method():
+    b = 3
+    return b
+a = method()
+　というようにしても機能するが、インタラクティブモードにこれをコピペ、つまり
+$ python
+>>> def method():
+...     b = 4
+...     return b
+... a = method()
+  File "<stdin>", line 4
+    a = method()
+    ^
+SyntaxError: invalid syntax
+>>> 
+　としてもエラーがでてしまう。defで関数モードの...に切り替わるが、これは0Aを2回、つまり空行でしか解除できない。
+
+　bashもインタープリタ言語と言えるかもしれない。それゆえ、pyファイルのことをpythonスクリプトというのだろう。bashコマンドをまとめたものをbashスクリプトというように。
+　pyinstallerを使うと、pyファイルをバイナリファイルにできる。パスの通ったところに配置すれば、コマンドにすることができる。javaにはできない素晴らしい機能。
+
+
+
+
+
+　型を指定しなくてもいいというのは誤りで、cでは
+int a
+a=3
+　と書くのにたいし、pythonでは右辺で変数の定義を決めることができる。
+a = 3
+　とすればintになり、
+a = 3.0
+　というように.があればfloatに。
+a = 'abc'
+　というように'で囲まれていれば文字列になる。
+a = matrix.Marix(3,4)
+　とすればmatrixになる。
+
+　これの代償として、メモリの確保の際にかならずなにかの値で書き換え、つまり初期化が伴ってしまうことだ。まあ、いつかメモリには値を入れるわけなので、値をいれるときにメモリを確保するようにプログラミングすればいいだけ。
+　ただ、matrixで__init__が[0.0] * (row * col)なのでこれは少し無駄かもしれないが。
+
+　基本はmatrixのようなコンストラクタの定義で、intやfloatなどの3, 3.0とするだけでインスタンスが生成できるのはリテラル表記があるからである。
+
+
+
+
+
+
+
+
+　strはchar、つまり文字はなく、1文字でも文字列として扱う。
+　floatについて。cでは4バイトがfloatで8バイトがdoubleだが、4バイトをなくして、全て8byteでいいとしたのがpython。これこそ高級の象徴であると思う。8byteをfloatとしていることに注意。
+　intについて。FF FF FF FFに+1されたら自動でreallocして拡張してくれる。これをcで実現しようとすると、+ではなく、plus(a, b)とすると、a+bを格納した新しいメモリを確保し、メモリと番地を返すようにするしかない。
+　よって、shortとかunsighnedとかなく、intだけ。つまり、基本の変数は、int, float, strの3つだけ。
+
+
+
+
+　int。
+
+　__init__()。
+>>> int("14")
+14
+>>> int("14", 16)
+20
+　より、int("14")で十進数とみなして14を格納したintを返してくれる。ここで、"14"を16進数とみなして20を格納したintを返すには、int("14", 16)というようにするとできる。
+
+　これの逆、つまり、20というintを16進数の"14"というstrに変換するhex()はstr参照。
+
+
+
+　__add__()。
+　ちなみに、int, floatでの演算子の定義は次のようである。
+　intとfloatでは加算。int+floatをするとfloatを出すのはcと同じだが、__add__でotherがintであるときと、floatであるときで条件分岐して処理しているだろう。いや、C言語でそれができるなら、条件分岐せずa+bだけでいいのかも。
+　これを少し掘り下げる。
+>>> type(3)
+<class 'int'>
+>>> type(3 + 0.3)
+<class 'float'>
+>>> 3 + 0.3
+3.3
+　となっている。gen_lozで、
+sum = 0
+for j in range(akl.shape[1]):
+    sum += akl[i, j] * (vec_m[3 * j + 1, 0] - y)
+　とする部分がある。sumはintになっているが、0 + 0.3はfloatである0.3の__radd__が使われて、0であるintをfloatに変換して加算して得たfloatを返すので、0.0とする必要はない。
+
+
+　to_bytes()。
+>>> a = 3
+>>> a.to_bytes(4, byteorder='little')
+b'\x03\x00\x00\x00'
+　という感じ。リトルエンディアンを指定してbyteに変える。
+>>> a.to_bytes(4)
+Traceback (most recent call last):
+  File "<stdin>", line 1, in <module>
+TypeError: to_bytes() missing required argument 'byteorder' (pos 2)
+　というように、指定しないとエラーがでる。キーワード引数ではないのだろうか。いや、位置引数もキーワード引数みたいに渡せるのかも。あとで確かめて、関数のところにかく。実際、
+a.to_bytes(4, 'little')
+　これでいけた。こっちのほうがいいと思う。
+
+
+
+　intのリテラル表記とインスタンスmethodは組み合わせられない。
+
+>>> 4.to_bytes(4, byteorder='little')
+  File "<stdin>", line 1
+    4.to_bytes(4, byteorder='little')
+     ^
+SyntaxError: invalid decimal literal
+
+　より、intのリテラル表記でインスタンスmethodを使うと、おそらくインスタンスmethodの.とfloatのリテラル表記の.がかぶるからだろうか、エラーがでるようだ。
+　解決策として、
+n = 3
+n.to_bytes()
+　とするのは、そもそもの目的を達成していないのでなし。目的というのはリテラル表記とインスタンスmethodを組み合わせることで、一行で書きたいというものだ。
+int(3).to_bytes(4,'little')
+　でいけた。intをint.__init__()に渡すという、intをintに変換するというよくわからないことをしているが、int.__int__()はintを受け取るとそのまま値をコピーして生成するのだろう。
+(3).to_bytes(4,'little')
+　でもいけた。
+
+
+
+
+
+
+
+
+　str。
+　str.__add__。結合した文字列を返す。この仕様はとてもわかりやすい。もちろん内部的にはstr_mergeのように、二つの文字列のメモリの番地と容量を受け取って結合した文字列のメモリの番地と要領を返す関数を使っているわけだが。
+
+　strのリテラル表記"aiueo"の改行エスケープについて。bashでは改行をエスケープできるが、それと同様にpythonでも、
+    print("\
+\n\
+Usage:\n\
+    histogram 0: a.dat\n\
+    histogram 0:5 a.dat\n\
+    histogram 0:5:0.1 a.dat\n\
+    print_matrix 1 : y.mat | histogram 0:5:0.1\n\
+\n\
+__main__: len(sys.argv) != 2 and len(sys.argv) != 3"
+    )
+　というように、改行をエスケープできる。C言語と同様である。
+
+　インデントがそのまま入ってしまうので、左詰にする必要があり、それが少し嫌だったのだが、もっといい方法を見つけた。""で囲まれた文字リテラルをいくつか羅列すると、つなぎ合わせてくれるらしい。つまり、
+print("abcde" "fgh" "ijk")
+　というようにすると、"abcdefghijk"にしてくれる。コンマ区切りではないことに注意。これを改行区切りでもよいので、
+if len(sys.argv) != 3:
+    print(
+        "\n"
+        "Usage: cmpdir.py ./handmade_mac/ ./handmade_uriel/\n"
+        "this mean: cmpdir.py dir_a_name dir_b_name\n"
+        "must be endwith '/'\n"
+        "\n"
+        "__main__: len(sys.argv) != 3"
+    ) 
+    exit()
+　とすればわかりやすい複数行の文字列が作れる。ちなみにC言語でもつかえるらしい。
+
+
+　文字の色について。文字の色を含めたターミナルのフォーマットはfile_format/log.txt参照。pythonでは^[、バイナリでは1Bを、"\033"で出力できるようになっているので、
+print("\033[31mThis text is red.\033[0m")
+　でつけられる。31は赤色を示すANCIエスケープシーケンス。shell.txt参照。
+
+　ちなみにC言語では^[、1Bを"\x1b"で出力できる。C言語のほうが1Bにxをつけただけで、バイナリそのままなのでわかりやすい。
+
+　C言語ではdefineをつかって色を定義しておくことで、
+#define RESET "\x1b[0m"
+#define RED "\x1b[31m"
+...
+printf(RED "This text is red." RESET)
+　と書く。pythonではマクロはないので、変数をつかう。
+RED = "\033[31m"
+RESET = "\033[0m"
+print(f"{RED}This text is red.{RESET}")
+　こんな感じ。
+
+
+f'{i}d'
+　について。これはフォーマット文字列リテラル(f-string)と呼ばれるもので、リテラル表記の一種であるものの、具体的にはPythonのフォーマット文字列の機能を利用して、変数iの値を埋め込むための記法であるとのこと。
+　文字列の特殊なリテラル表記と考えていいかもしれない。変数は__str__を呼び出してstrに変換しているのだろう。
+print(i, "th, ", max, ", (", j_max, ",", k_max, ")", sep="")
+　を、
+print(f'{i+1}th, {max}, ({j_max},{k_max})')
+　とできるので便利。もちろんprintだけでなく、文字列であることに注意。structのf'{a.row * a.col}d'のようなところでもつかえる。
+
+f'{value:>10}'
+　というように、変数名:>10で最小幅を10に設定し、右揃え、というように変換できる。'abc'という文字なら、空白*7 + 'abc'という文字列に変換する。abcde...と10文字を超えた場合はそのまま。このときに
+> : 空白*7 + 'abc'
+> : 'abc' + 空白*7
+　という感じだと思う。
+
+
+　strのインスタンス関数。
+────capitalize(): 最初の文字を大文字にし、それ以外の文字を小文字にします。
+"hello world".capitalize() -> "Hello world"
+────title(): 各単語の最初の文字を大文字に変換します（タイトルケース）。
+"hello world".title() -> "Hello World"
+
+────casefold(): 文字列を小文字に変換します（より広範囲のUnicode文字も変換される点でlower()より強力）。
+"HELLO".casefold() -> "hello"
+────lower(): 文字列を小文字に変換します。
+"HELLO".lower() -> "hello"
+────upper(): 文字列を大文字に変換します。
+"hello".upper() -> "HELLO"
+────swapcase(): 大文字を小文字に、小文字を大文字に変換します。
+"Hello World".swapcase() -> "hELLO wORLD"
+
+────center(width, [fillchar]): 文字列を指定された幅で中央寄せにし、残りの部分を指定の文字で埋めます（デフォルトでは空白）。
+"hello".center(10, "-") -> "--hello---"
+────ljust(width, [fillchar]): 文字列を左寄せにし、指定された幅の間は右側に空白または指定の文字を埋めます。
+"hello".ljust(10, "-") -> "hello-----"
+
+────count(substring): 文字列中に指定した部分文字列が何回出現するかをカウントします。
+"hello world".count("o") -> 2
+────find(substring): 指定された部分文字列が最初に出現する位置を返します。見つからない場合は-1を返します。
+"hello world".find("lo") -> 3
+────rfind(substring): findは最初から検索して、見つかったらその位置を返すが、こっちは末尾から検索する。
+────index(substring): 指定された部分文字列が最初に出現する位置を返します。見つからない場合は例外を発生させます（find() との違い）。
+"hello world".index("lo") -> 3
+
+────endswith(suffix): 文字列が指定のサフィックス（接尾辞）で終わっているかを確認します。
+"hello.txt".endswith(".txt") -> True
+　これ、C言語でも作りたい。endswith_str(char *str1, char *str2)で、str2をlen()で取得して、str1のlen()で末尾ポインタからlen(str2)前の位置から、str1とstr2をstr_cmpする。
+────startswith(prefix): 文字列が指定のプレフィックス（接頭辞）で始まっているかを確認します。
+"hello world".startswith("he") -> True
+
+────isalnum(): 文字列が英数字だけで構成されている場合にTrueを返します（空文字列はFalse）。
+"abc123".isalnum() -> True
+────isalpha(): 文字列がアルファベット文字だけで構成されている場合にTrueを返します。
+"abc".isalpha() -> True
+────isdigit(): 文字列が数字（0-9）だけで構成されている場合にTrueを返します。
+"123".isdigit() -> True
+────islower(): 文字列がすべて小文字で構成されている場合にTrueを返します。
+"hello".islower() -> True
+────isspace(): 文字列が空白文字だけで構成されている場合にTrueを返します。
+"   ".isspace() -> True
+────istitle(): 各単語の最初の文字が大文字、それ以外が小文字の場合にTrueを返します。
+"Hello World".istitle() -> True
+────isupper(): 文字列がすべて大文字で構成されている場合にTrueを返します。
+"HELLO".isupper() -> True
+
+────join(iterable): 指定されたイテラブル（リストなど）内の要素を連結して文字列を生成します。
+" ".join(["hello", "world"]) -> "hello world"
+────split([sep, maxsplit]): 文字列を指定された区切り文字（デフォルトは空白）で分割し、リストを返します。maxsplitで分割回数を指定可能。
+"hello world".split() -> ["hello", "world"]
+────splitlines([keepends]): 改行文字で文字列を分割し、行ごとのリストを返します。keependsをTrueにすると、改行文字も含めます。
+"hello\nworld".splitlines() -> ["hello", "world"]
+
+────lstrip([chars]): 文字列の左端から指定された文字を削除します（デフォルトは空白）。
+"  hello".lstrip() -> "hello"
+────rstrip([chars]): 文字列の右端から指定された文字を削除します（デフォルトは空白）。
+"hello   ".rstrip() -> "hello"
+────strip([chars]): 文字列の両端から指定された文字を削除します（デフォルトは空白）。
+"  hello  ".strip() -> "hello"
+
+────replace(old, new, [count]): 指定した文字列を別の文字列に置換します。countで置換回数を指定可能（デフォルトはすべて）。
+"hello world".replace("world", "Python") -> "hello Python"
+────rfind(substring): 指定された部分文字列が最後に出現する位置を返します。見つからない場合は-1を返します。
+"hello world".rfind("o") -> 7
+────rjust(width, [fillchar]): 文字列を右寄せにし、指定された幅の間は左側に空白または指定の文字を埋めます。
+"hello".rjust(10, "-") -> "-----hello"
+
+────zfill(width): 指定された幅になるまで文字列の左端を0で埋めます。
+"42".zfill(5) -> "00042"
+
+
+　format()。floatの__str__()がかなり長いので、短くする方法。strのインスタンス変数として実装されていて、
+"{:.2f}"
+　という小数点以下は2桁までという意味の文字列のインスタンスをつくり、
+>>> "{:.2f}".format(3.21434), type("{:.2f}".format(3.21434))
+'3.21', <class 'str'>
+　とすることで、2桁に短くなった文字列が得られる。ようは、
+format("{:.2f}": str, num: float)
+　というmethodをstrのほうのインスタンスmethodで作ったということだろう。
+
+
+　hex()。strのコンストラクタでもインスタンス関数でもないが、strを返すものなのでここに書く。15というintを16進数で解釈して"F"という文字列を返す関数としてhex()が標準の組み込み関数として用意されている。
+>>> hex(15)
+'0xf'
+　という感じ。ただし、小文字なのと、先頭に0xがついているので、
+>>> hex(15)[2:].upper()
+'F'
+　というように、strのインスタンスmethodを駆使すれば大文字16進数にできる。これはstr.__getitem__にsliceを与えることで、先頭2文字を消して、str.upper()で大文字に変換したstrを得ている。
+　ただ、intのインスタンスmethodにせず、あくまでビルトイン関数にしたのがよくわからない。
+15.hex()
+　で'0xf"というstrをreturnしてもいいのではとは思った。
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+　print。
+
+x = 42
+y = 3.14
+print(x)  # 出力: 42
+print(y)  # 出力: 3.14
+name = "Alice"
+age = 30
+print("Name:", name, "Age:", age)
+
+　これらは基本的に同じで、可変の引数に対し、それぞれ文字列に変換しそのまま標準出力する。,区切りで4つの変数を与えているだけ。だが、出力される文字列は
+Name: Alice Age: 30
+　というように空白が入る。
+
+name = "Alice"
+age = 30
+print(f"Name: {name}, Age: {age}")
+
+　これはPython3.6以降の新しい書き方。これはとてもわかりやすい。全体が文字列になっていて、{変数}とすればその変数をstrに変換して出力。{}を出力できない、あるいはエスケープする必要があるのが難点か。あと空白は入らないよね。実験したい。
+
+>>> print(3,4,3)
+3 4 3
+>>> print(3,4,3, sep="/")
+3/4/3
+>>> print(3,4,3, sep="")
+343
+　で区切り文字を変えられる。sep=に関しては関数のキーワード引数を参照。
+
+>>> print(3,4,3, end="")
+3 4 3>>> print(3,4,3, end="\n\n")
+3 4 3
+
+>>>
+　で最後に追加される改行を変えられる。
+
+　strの__add__の仕様により、このような便利なprint関数を使わずとも、文字列を受け取って標準出力する関数をputsとして、intとfloatをstrに変換する関数__str__で、
+puts("num: " + __str__(num) + "ave: " + __str__(ave))
+　と簡単にかける。これをさらに簡単にして、
+print("num: ", num, "ave: ", ave)
+　としているわけでそこまで変わらないのでprint関数いらない気もする。いや、この__str__をなくせるのがprint関数の強みか。
+
+　出力先をstdoutだけでなく、stderrやfile streamなどにする方法。C言語では、fprintfで、最初の引数で指定できる。pythonでは、
+import sys
+with open("output.log", "w") as f:
+    sys.stdout = f  # 標準出力をファイルに変更
+    print("This will go into the file instead of the console")  # ファイルに書き込まれる
+    sys.stdout = sys.__stdout__
+　というようにする。いちいち、sysのクラス変数をファイルのストリームに切り替えたのち、またstdoutに戻す必要があるのがなんだかめんどくさいように思う。キーワード引数とかで対応したほうが使いやすいだろうに。
+
+>>> with open("log.py", "rb") as file:
+...     type(file)
+... 
+<class '_io.BufferedReader'>
+
+>>> import sys
+>>> type(sys.stdout), sys.stdout
+(<class '_io.TextIOWrapper'>, <_io.TextIOWrapper name='<stdout>' mode='w' encoding='utf-8'>)
+>>> type(sys.__stdout__), sys.__stdout__
+(<class '_io.TextIOWrapper'>, <_io.TextIOWrapper name='<stdout>' mode='w' encoding='utf-8'>)
+　より、それぞれのオブジェクトなどを調べてみた。といっても、よくわからない。sys.stdoutや、sys.__stdout__も、モジュール変数。sys.pathもそうだろう。モジュール変数については、ライブラリのところの__main__を参照。
+
+　いや、print関数でファイルに書き込むよりf.writeをつかったほうがいい。詳しくは、with openの下参照。
+
+　fflush(stdout)について。C言語では、progressのような改行前に随時出力したい場合に、
+fflush(stdout);
+　とする必要があった。pythonでも同様の処理が必要で、
+print(text, flush=True)
+　とするか、
+print(text)
+sys.stdout.flush()
+　とする必要がある。前者でいいと思う。
+
+
+
+　
+
+　
+　fopen。
+
+　pythonではwith openで、とっても簡単で、fopen, fcloseをインデントによる構文にしているというだけ。これはいい仕様だと思う。
+　一瞬、mallocとfreeも構文にしたほうがいいのではと思ったが、そこまで構文にすると逆に紛らわしい。まあ、pythonではガベージコレクションでfreeはないのでそもそも必要ないのだが。C言語でfopen, fcloseが構文でなかったのはすべて構文にするのもわかりづらいからかもしれない。
+
+with open("log.py", "rb") as file:
+    type(file)
+　が基本文。rbはモードである。いかに一覧を示す。
+r: 読み込みモード（デフォルト）
+　ファイルを読み込み専用で開きます。ファイルが存在しない場合はエラーが発生します。
+w: 書き込みモード
+  ファイルを書き込み専用で開きます。ファイルが存在する場合は、その内容が上書きされます*。ファイルが存在しない場合は新しく作成されます。
+a: 追記モード（append）
+  ファイルに追記するモードです。ファイルが存在しない場合は新しく作成され、既存の内容が保持されたまま追記されます。
+x: 新規作成モード
+  ファイルが存在しない場合のみ新しくファイルを作成します。すでにファイルが存在しているとエラーが発生します。このモードは、ファイルが上書きされないように保護するために使用します。
+rb: バイナリ読み込みモード。
+wb: バイナリ書き込みモード。
+ab: バイナリ追記モード。
+xb: バイナリ新規作成モード。
+r+: 読み書きモード
+  ファイルを読み込みおよび書き込みモードで開きます。ファイルが存在しない場合はエラーが発生します。読み込んだ後に書き込みを行うと、ファイル内容が上書きされます。
+w+: 読み書きモード（ファイルを上書き）
+  ファイルを読み書き専用で開きます。存在するファイルの内容は上書きされます。ファイルが存在しない場合は新しく作成されます。
+a+: 読み込み追記モード
+  ファイルを読み込みおよび追記モードで開きます。既存のファイル内容を保持しつつ、追記が可能です。ファイルが存在しない場合は新しく作成されます。
+
+　テキストモードとバイナリモードの違い。
+　r、w、aなどのテキストモードは、データを文字列として扱います。テキストファイルの読み書きに使われ、UTF-8などのエンコーディングを考慮します。
+　rb、wb、ab などのバイナリモードは、データをバイト列として扱います。エンコーディングは関係なく、ファイルの内容がそのまま扱われます。
+　基本バイナリモードで、structでstrやdoubleに変換するでいいと思う。rbがファイルを書き換えずただ読み込むモードで、wbが書き込みだが、すでにあるファイルを上書きしてしまい、前のファイルが消える時点で想定外な気がするので基本xbで書き込みでいいだろう。ファイルに追記できるabも使えそう。r+などは読み込みと書き込みが同時に行えるモードなわけで少し特殊。読み込みと書き込みを同時に行いたいと思ったことがないのでつかわないかも。まあ、テキストエディタのようなものをつくるときにつかえるのかも。
+　
+　さて、まず、次のコードでエラーが出てしまった。
+with open(file_name, 'xb') as output_file:
+    sys.stdout = output_file
+    print(self)
+    sys.stdout = sys.__stdout__
+print("generated", file_name)
+　CではUTF-8だけを用いているので、ファイルをそのままfreadすれば文字列になり、文字列をそのまま書き込めばファイルに出力できる。
+　pythonではどうやら、メモリ効率とアクセス速度のバランスを取るために、文字列の内容によってエンコーディングを自動で選択しているらしい。
+　4byte文字がなく、日本語が多い場合はUTF-16にして、すべて2byteにすることで扱いやすくして、英語が多い場合はUTF-8にして、3byte文字は特殊カウントでカウントする。前者はsize/2が文字数だし、後者は特殊カウンタをpとすると、size-2pが文字数になるだろう。まぁ、16番目の文字を求められたときに対応できるように場所をlistに保存しておく必要もあるかもしれない。とにかく、どんなアルゴリズムかは置いておいて、文字コードを自在にしているということである。
+　chatGPTに聞いたところ、すべての文字がASCIIの場合は、UTF-8を使用するが、Unicode文字が含まれる場合にはUTF-16やUTF-32に切り替えることがあるとのこと。上のは私の妄想なので注意。
+　エンコード自在というのは、プログラミングだからできることであり、時間の止まったファイルでは固定にするしかない。
+
+　なので、ファイルから読み込んだバイナリをpythonの内部表現のバイナリ、つまりstrに変換する必要がある。
+　ファイルストリーム、byte、strの3段階になっているので、書き込みは、
+with open(file_name, 'xb') as f:
+    str_mat = str(mat) + '\n'
+    byte_mat = str_mat.encode('utf-8')
+    f.write(byte.mat)
+　読み込みは、
+with open(file_name, 'rb') as f:
+    byte_mat = f.read()
+    str_mat = byte_mat.decode('utf-8')
+    mat = Matrix(str_mat)
+　と、このようにする必要がある。print()を使おうとしていたのは、__str__を使いたかったからだが、どうやらstr(mat)でmat.__str__()を呼び出してくれるらしい。なので、printを使わすにstrでMatrixをstrに変換して、strをencodeでbyteにし、byteをf.writeでファイルに書き込むのがいいと思う。
+　ただし、print()は末尾に改行を足してくれるが、それはprint()だけなので、str(mat)に+'\n'する必要があるので注意。
+
+　f.readについて、ファイルが終わった場合にエラーオブジェクトを投げずただからのバイトを返す。なので、
+data = f.read(n)
+if len(data) != n:
+    raise ValueError("len(data) != n")
+　というようにしてエラーハンドリングが必要になる。ただ、struct.unpackを使う場合
+>>> Matrix("b.mat")
+Traceback (most recent call last):
+  File "<stdin>", line 1, in <module>
+  File "/mnt/d/data/app/myapp/tool_handmade/python/py_library_handmade/matrix.py", line 44, in __init__
+    tuple_matrix = struct.unpack(f"{self.row * self.col}d", f.read(8 * self.row * self.col))
+struct.error: unpack requires a buffer of 72 bytes
+　というようにエラーを出してくれるのでエラーハンドリングは必要ない。
+
+　あと、クラスのコンストラクタのところに書いたとおり、matrixをstrに変換する関数は基本的にはstrのコンストラクタに書くべきだ。だが、どのオブジェクトもstrに変換しprintすることが多いので、慣例として、Matrix側に__str__として書くのだろう。そして、strのコンストラクタでただ__str__を呼び出すだけにすることでこれが成り立っている。
+
+　str()実験。
+>>> print(mat.__str__())
+0.0 0.0 0.0
+2.0 3.0 4.0
+2.0 3.0 4.0
+>>> print(str(mat))
+0.0 0.0 0.0
+2.0 3.0 4.0
+2.0 3.0 4.0
+　ちなみに、strは__str__と__repr__が同じでないオブジェクトなので、
+>>> mat.__str__()
+'0.0 0.0 0.0\n2.0 3.0 4.0\n2.0 3.0 4.0'
+>>> str(mat)
+'0.0 0.0 0.0\n2.0 3.0 4.0\n2.0 3.0 4.0'
+　となる。
+
+　intとfloatはstructが使えてこっちのほうがCでの構造体とfreadのように使える。ただし、Cではcharもできたが、strの内部表現が複雑なためstructでは扱えない。まぁintも4バイトで書き込む以上、5バイトに拡張されていたらまずい気がする。エラーが出るのか損失するのか実験したい。
+　とにかく、intとfloatに関しては、structでbyteに相互変換できる。あとはstrと同様f.write, f.readでいい。コードでいうなら、書き込みは、
+with open(file_name, 'xb) as f:
+    byte_rowcol = struct.pack('II', self.row, self.col)
+    byte_matrix = struct.pack(f"{self.row * self.col}d", *self.matrix)
+    f.write(byte_rowcol)
+    f.write(byte_matrix)
+　*はアンパック演算子を参照。読み込みは、
+with open(args[0], "rb") as f:
+    byte_rowcol = f.read(8)
+    byte_matrix = f.read(8 * self.row * self.col)
+    self.row, self.col = struct.unpack("II", byte_rowcol)
+    tuple_matrix = struct.unpack(f"{self.row * self.col}d", byte_matrix)
+    self.matrix = list(tuple_matrix)
+
+　ちなみに、struct.unpack()はtupleを返すので、
+ran_int = struct.unpack('L', ran_byte)[0]
+　というようにする必要がある。row, colは、
+row, col = 
+　としているので自動で展開されるのでいいらしい。というかこの書き方は特殊な気がする。
+
+　そういえば、structを自作したいとか考えていた気がする。文字列と可変引数を受け取って、listを返す？
+
+
+
+
+
+
+
+
+
+
+　struct。
+
+row, col = struct.unpack("II", mat_file.read(8))
+　というようにしてつかう。C言語では、
+typedef struct
+{
+    char name[4] ;
+    unsigned int size ;
+    char wave[4] ;
+} RIFF_CHUNK ;
+　というように構造体を定義しておいて、
+READ_CHUNK *read = (READ_CHUNK *)malloc(sizeof(READ_CHUNK)) ;
+　とmallocでメモリ確保することで、静的に確保した場合とは異なり、連続したsizeof(READ_CHUNK)bytesを確保できる。あとは、
+fread(wav->riff, sizeof(RIFF_CHUNK), 1, input)
+　とすることで、wav->riffにsizeof(RIFF_CHUNK) * 1bytes分をinputからバイナリをコピーできる。pythonではこれを、
+with open(file_name, "rb") as mat_file:
+    name, size, wave = struct.unpack("4C?U?4C?", mat_file.read(8))
+　の二文で書くことができる。たしかに綺麗。
+
+import struct
+print(struct)
+　で/usr/lib/python3.10/struct.pyとでる。struct.pyでは、
+import _struct
+　とあるが、これはc言語の拡張バイナリであり、そもそもstructは標準モジュールなのでpythonと一緒にコンパイルされているとのこと。つまり、pythonでは書かれておらず、ソースコードは見つけられない。
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+　byte。
+
+　fopenで(int, float, str) -> byte -> fileについてまとめているが、こっちのほうがいいかも。
+
+　__str__()。
+
+>>> int(31).to_bytes(4,'little')
+b'\x1f\x00\x00\x00'
+>>> int(32).to_bytes(4,'little')
+b' \x00\x00\x00'
+>>> int(33).to_bytes(4,'little')
+b'!\x00\x00\x00'
+>>> int(34).to_bytes(4,'little')
+b'"\x00\x00\x00'
+　より、32、つまり0x20からは空白などの文字にかえてしまうようだ。すべて0x表示でいいのに。
+
+
+　__add__()。
+>>> (3).to_bytes(4,'little') + (3).to_bytes(4, 'little')
+b'\x03\x00\x00\x00\x03\x00\x00\x00'
+　より、加算を行うのではなく、つなげるだけのようだ。
+
+
+　__getitem__()。
+　printするとわかりやすい。byte[3]というように__getitem__も使えるし、sliceも渡せる。ファイルの末尾1byteだけ消したい場合は、
+>>> a = data[0:len(data) - 1]
+>>> with open("b.mat", 'xb') as f:
+...     f.write(a)
+...
+>>>
+　とすればいい。
+
+
+　intとdoubleはstructでbyteに変換、strはstr.encodeでbyteに変換。
+byte_rowcol = struct.pack('II', self.row, self.col)
+byte_mat = str_mat.encode('utf-8')
+self.row, self.col = struct.unpack("II", byte_rowcol)
+str_mat = byte_mat.decode('utf-8')
+
+
+
+
+
+
+
+
+
+
+
+　関数。
+
+def my_function(arg1, arg2):
+    result = arg1 + arg2
+    return result
+
+　このようにして引数の型を指定せず定義できる。これが意外と怖くて、=は型宣言でもあるわけだが、arg1+arg2がなに型なのかが不明なので、resultの型が不明。ただ、pythonでは、整数と文字列を+にするとエラーが出る。
+
+　関数の引数に型指定がないのが気持ち悪くて、しばらくpythonから離れていたのだが、ときどきそのことを考えつつ、cのプログラミングをしていると、ある時はっとひらめいた。これはいわゆる、
+void *method(void *a, void *b)
+　というような型指定のないポインタなのだ。それはそうだ、pythonにおいて変数はすべてポインタ変数であり、関数間での受け渡しもすべてポインタを与えているだけなのだ。そこに型指定は必要ないはずだ。事実私も
+print_bin(void *p, unsigned int size)
+　のような感じでprint_binを定義していたし、listも、void *dataとしていたはずだ。
+
+　それに、a.rowを参照したときに、そのオブジェクトクラスのインスタンス変数にrowがなければエラーが出る。これは前にnextを参照するだけの関数を作ることで、任意のnextをもつ構造体に使える関数ができるか実験して、結局構造体変数の数でnextの番地が変わるので上手くいかなかったのだが、pythonではこれを実現できるということだ。
+　実際、print()は任意のオブジェクトを引数として受け取って、a.__str__()を呼び出しているわけで、よく使われている。
+
+
+
+　キーワード引数。
+my_function(arg2=3, arg1=4)
+　というように、rのように引数を指定できる。これをキーワード引数というらしい。cでの(a, b)というふうに前から順番に定義された数だけ渡すのは位置引数というらしい。
+def my_function(arg1=2, arg2=3):
+    result = arg1 + arg2
+    return result
+　とすればデフォルト値を設定できる。これを全てに設定すれば引数なしでも上手く動き、引数でarg1=2とすれば変えたい引数だけキーワード引数として与えられる。printデフォルト値はそれぞれ空白と改行。
+
+　デフォルト値を与えると、キーワード引数しか使えないように思うが、my_function(4, 3)とすればarg1=4, arg2=3と変数が入る。この仕様上、最初に位置引数を並べてからキーワード引数を並べるのが推奨される。位置引数は必須引数である以上、位置引数の前にあるキーワード引数も位置引数のように与える必要があり、キーワード引数の意味がない。実際、
+>>> def method(a, b=3, c):
+  File "<stdin>", line 1
+    def method(a, b=3, c):
+                       ^
+SyntaxError: non-default argument follows default argument
+　より、そもそも定義しようとするとエラーがでる。また、
+>>> def method(a, b=3, c=4):
+...     print(a,b,c)
+>>> method(b=3, 4, c=2)
+  File "<stdin>", line 1
+    method(b=3, 4, c=2)
+                      ^
+SyntaxError: positional argument follows keyword argument
+　より、呼び出し側で、位置引数より前にキーワード引数を与えるのもエラーになる。キーワード引数は位置引数のカウントから除外するような挙動なら、つまり、b=3では位置引数のカウントはそのままでbに3が入り、次の4は1つ目の位置引数であるaに入るというような挙動ならこれでも動いたはず。
+　あくまで位置引数なのだろう。位置引数が1番目に定義されているなら、1番目にわたす値は位置引数に入るのだ。
+>>> def meth(a = 3, b = 4, c = 4):
+...     print(a,b,c)
+>>> meth(4,5,6)
+4 5 6
+>>> meth(b=4,5,6)
+  File "<stdin>", line 1
+    meth(b=4,5,6)
+                ^
+SyntaxError: positional argument follows keyword argument
+　とするのもダメらしい。キーワード引数も位置引数のように値を渡せるはずなので、b=4でbに4が入り、5は二番目なのでb、6は3番目なのでcに入るという挙動でもよかったはず。
+　なのにこうなるのは、そもそもmethod(b=3, 3, 5)とでてきた時点でエラーを出しているようだ。対応する引数が位置引数か、キーワード引数かにかかわらず。まあ、位置引数、キーワード引数の順に定義されているのが確定しているのだから、呼び出しの文法もこれで確定させたほうがわかりやすいということだろう。
+　あとどうでもいいが、エラーメッセージから、英語では位置引数はpositional argument、キーワード引数はkeyword argumentというようだ。
+
+
+
+　キーワード引数のデフォルト値はimport時に確定する。
+　randで、キーワード引数にモジュールでのグローバル変数、つまり、モジュール変数を与えたのだが、キーワード引数はimportされた時点での値で固定されるため、モジュール変数を更新しても反映されなかった。なので、rand.pyで、
+def end(start_time=None):
+    if start_time is None:
+        start_time = start_time_update
+　とする必要があった。
+
+
+
+　型を指定する方法。
+from typing import Union
+def my_function(arg1: int, arg2: int) -> int:
+    result = arg1 + arg2
+    return result
+print(my_function(5, 3))         # 出力: 8
+# print(my_function("Hello, ", "world!"))  # エラー: 型チェックツールによって警告される可能性あり
+　Unionとはなにかは不明。
+
+
+　引数の改行について。
+method
+(
+    a,
+    b
+)
+　とするとエラーになるが、
+method(
+    a,
+    b
+)
+　とすればエラーにならない。methodと、インスタンスやクラス名がかぶっていても()の有無で区別しているのがこれの原因だろう。
+
+
+
+　クラスやmethodをmethodの引数として与える。pythonではクラスやmethodをmethodの引数として与えることができる。type()はクラスを返すmethodであるし、リザバーの教科書のコードではリザバーにtanhというmethodを引数として与えていた。
+　ndarray.pyで、自作のndarray用のmethodを集めているのだが、ndarrayをstrに変換するmethodとして、str()を定義していた。それゆえ、write()で、isinstance(file_name, str)としたときに、クラスであるstrより同じファイルにあるmethodであるstrが優先されてしまい、エラーが起きてしまった。
+　どうやら名前が衝突したときに次のような優先順位になってしまうらしい。
+Local（ローカルスコープ）: 関数やメソッド内の変数や名前。
+Enclosing（外部のスコープ）: 関数がネストされている場合、外側の関数の名前空間。
+Global（グローバルスコープ）: モジュールのトップレベルで定義された名前（ndarray モジュール内で定義された str 関数など）。
+Built-in（ビルトインスコープ）: Pythonの組み込み関数や型（str, int, print, など）。
+　もしクラスのstrというように指定したい場合、
+import builtins
+　して、
+builtins.str
+　としたほうがいいらしい。基本的にライブラリはimport nameとして、name.methodというように指定するが、isinstanceとかstrとか標準装備のものはその限りではない。そこに衝突の危険性がある。
+　まあ、標準装備であるstrやらintやらと同じ名前のmethodを定義したのが悪いが。ndarrayのstrは__str__に変えた。__str__はクラスのインスタンスmethodだと特別な関数になるが、モジュールの関数として定義したときはとくのそのようなことも起こらないらしい。逆にそう定義したからといって特別な処理は行われないので__str__にする。
+
+
+
+　可変長引数。引数の数を変える方法。複数のオブジェクトを返すときはtupleで受け取れるが、これと同様にtupleで複数の引数を受け取ることができる。
+>>> def method(*args):
+...     print(type(args))
+...     print(type(args[0]), type(args[1]))
+... 
+>>> method(1, 'a')
+<class 'tuple'>
+<class 'int'> <class 'str'>
+　という感じ。tupleでラップして受け取るという感じ。引数はvoid*型で、つまり任意のオブジェクトなのだが、*argsというように*をつけた場合、複数の任意のオブジェクトをtupleという型で受け取ることになる。
+
+>>> def method(a):
+...     print(type(a))
+... 
+>>> method(3)
+<class 'int'>
+>>> method(3.0)
+<class 'float'>
+　tupleを使わない場合は引数は任意で不明なオブジェクトだが、tupleを使う場合はtupleで固定になる。まあ任意の複数のオブジェクトをtupleにパックして引数にしているのであたりまえではあるが。
+
+　tupleを使う場合は引数は*をつけた引数ひとつだけにする必要がある。
+>>> def method(*a, b):
+...     print(a, b)
+... 
+>>> method(1, 2)
+Traceback (most recent call last):
+  File "<stdin>", line 1, in <module>
+TypeError: method() missing 1 required keyword-only argument: 'b'
+　とエラーがでるので。ただし、エラーを見ると位置引数は*aひとつだけである必要があるが、キーワード変数は使うことができるようで、
+>>> def method(*a, b=3):
+...     print(a)
+...     print(b)
+>>> method(1,2,3,4)
+(1, 2, 3, 4)
+3
+>>> method(1,2,3,b=4)
+(1, 2, 3)
+4
+　より実際可能だった。ただし、キーワード引数への代入がキーワードでしか行えなくなる。というか、これならnumpy.ndarrayのように、
+method(a: tuple, b=3)
+　としたほうがいいかもしれない。実際、*argsのように標準的な可変長引数を使わずとも、ndarrayのようにtupleを受け取るようにしたほうがきれいな気がする。つまり、*argsは使わなくていいかも。
+　ただ、
+method(3,4)
+　と*argsはできるものの、tupleを受け取る場合は、
+method((3,4))
+　とする必要がある。
+
+
+
+　可変長の戻り値について。
+def min_max(values):
+    return min(values), max(values)
+minimum, maximum = min_max([1, 2, 3, 4, 5])
+print(minimum)  # 出力: 1
+print(maximum)  # 出力: 5
+　とすることで、複数の値を返せるらしい。C言語では引数にポインタを与えて、書き換えることで複数の値を返すようにしていた。pythonではまずポインタがデフォルトなので、オブジェクトに中身を書き換えるインスタンス変数があれば簡単に書き換えができるうえ、さらにはreturnでも複数のオブジェクトを返せる。
+
+　これ実際はtupleをひとつ返すという挙動になっている。
+>>> def method():
+...     return 1, 2, 3
+>>> a = method()
+>>> type(a)
+<class 'tuple'>
+　である。なので、
+>>> a, b, c = method()
+>>> type(a), type(b), type(c)
+(<class 'int'>, <class 'int'>, <class 'int'>)
+　というようにして、tupleのアンパックを行う必要がある。アンパック参照。あと、関数でのreturn a, bと、return (a, b)は同じで、どちらもtupleを返す。
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+　アンパック。
+
+　まず、アンパック演算子*について。
+data = struct.pack(f"{mat.row * mat.col}d", *mat.matrix)
+　ででてきた。これはlistをひとつ引数として渡すのではなく、イテラブルなクラスに限り、*で一つずつ分解して、それぞれを引数として渡す。struct.packは("II", a, b)というように、strと、strで出てきた文字の数だけ、引数として渡す必要があるので、*が必要になる。*なしだとlistをdとしてバイナリに変換することになる。エラーが出るはず。実験してみたところ、
+>>> def method(*a):
+...     print(len(a))
+... 
+>>> a = [1,2,3]
+>>> method(a)
+1
+>>> method(1,2,*a)
+5
+>>> b = (1,2,3)
+>>> method(b)
+1
+>>> method(1,2,*b)
+5
+>>> c = *b
+  File "<stdin>", line 1
+SyntaxError: can't use starred expression here
+>>> c = (*b)
+  File "<stdin>", line 1
+    c = (*b)
+         ^^
+SyntaxError: cannot use starred expression here
+　という感じ。関数にイテラブルクラスのインスタンスをアンパックしてわたすときの*aと、関数が可変長引数を受け取るときのmethod(*a)の形が似ていたので、いろいろ実験した。といっても、アンパック演算子の説明の通り、アンパックすれば要素に分けて渡せて、しなければそのまま一つの引数として与えられるというだけ。
+　listであるaを、method(*a)として与えて、methodでは(*a)として受け取っても、関数内でのaはtupleであることに注意。
+　また、アンパック演算子*はオーバーロードできず、__iter__などでイテラブルなクラスにすれば*を使えるようになるらしい。
+
+　アンパックはbをtupleなどとして、
+method(a, *b)
+　としてわたすものと、
+def method(*b)
+　として受け取るものと、
+x, y, z = b
+　として変数に行うものの3つがある。2つは上で解説したので、3つめについてまとめる。
+
+　まとめるといっても、__iter__が定義されているものならアンパックが使えて、変数を用意して、
+x, y, z = b
+　とすればそれぞれのオブジェクトがそれぞれの変数に入るというだけ。ただ、注意すべきは、
+>>> a, b = (1,2,3)
+Traceback (most recent call last):
+  File "<stdin>", line 1, in <module>
+ValueError: too many values to unpack (expected 2)
+　というように、数を間違えるとエラーがでる。前2つだけ、というわけにはいかないらしい。
+
+
+
+
+
+
+
+
+
+
+
+
+　list。
+　cではそもそも多重配列を使うことはなかった。多重配列として定義するくらいなら、matrix.cのようにただの配列を多次元配列として使えるようなライブラリを作るほうがつかいやすい。結局、本質はどうメモリを確保するかである。
+　最も基本的なメモリ確保は、int, char, doubleというように静的に確保する方法。そして、mallocでサイズだけ確保して、そのメモリをどう使うかは(int *)というようにして自分で指定する方法の二つがあった。静的確保は関数呼び出し時にスタックに確保されて終了時にスタックが解放される。動的確保はヒープ領域に確保されてfreeすることで解放される。いちいちmallocして使うたびに(int *)でキャストして、freeするのを簡単にできるのが前者の静的確保である。まあ、mallocを使うにしてもポインタを確保しておく変数は静的な変数なので、後者だけでプログラミングするのは不可能なのだが。イメージとしては、デフォルトは静的確保で、自在に使いたい部分だけ動的確保するという思想なのだろう。こう考えると、cもそこまで低級ではないのかもしれない。いや、そもそも動的確保だけでいけるか。これはあとで考える。
+　次に、まとめて確保する方法として、配列と構造体リストの二つがある。構造体リストは可変長なのに対し、配列は長さを変えられないというのが研究室入ったときに課題のときの理解だったが、reallocの登場により可変にできるようになった。どこかのプログラムで入力の読み込みでreallocを使ったはず。結局これらの違いは、メモリのなかで連続して確保する場合は配列で、ひとつひとつ別々に確保するのが構造体リストということだろう。これの比較はc.txtでreallocのところに書いてある。一応コピペしておく。
+　reallocは4byteを10個確保するであれば、必ず連続して40byteを確保する必要がある。一方単方向リストは4byteと*nextの8byteの12byteを10個確保すればいい。全体の容量では、reallocの方が少なくてすみ、アクセス速度も速い。だが、大きいおもちゃをいれるより、小さいおもちゃをたくさん入れるほうが箱に収まりやすいのと同様、reallocはメモリの断片化、つまり大きいおもちゃを入れすぎて、もう大きいおもちゃが入らず、隙間がたくさんある状態に陥りやすい。また、単純にreallocは配列なので1変数しか格納できない。単方向リストは構造体なので複数の変数に対応できる。
+
+　さて、pythonのint, str, floatは理解したので、リストについて掘り下げる。pythonのリストは、自作したクラス、int, str, floatなどの不変オブジェクトなどすべて使えるようにvoid *型の配列を作るものだ。これをcで試したことはなかった。matrixで、void **dataとして、ポインタの配列の先頭のポインタの番地をmatrixに確保することで、doubleのmatrixではなく、void *のmatrixを作ることができる。これにより、なんでも格納できるようにできると一度考えたが、それとほぼ同じだろう。C言語でRGBのためにはいずれこの工事をする必要がある。
+　構造体リストとの違いは、構造体リストはそれぞれのデータに*nextをつけることで、このポインタの配列を作らなくて済むようにしている。いや、結局*nextの数の分使うのだから配列に*nextを集めても変わらないはず。構造体リストやめようかな。これだからpythonのようなcを使いこなしたひとが作った模範的なプログラミングの仕方の完成形を勉強することはとてもいいことなのだろう。
+　とにかくこうすることで、3つ目を見つけたいときに1, 2, 3と*nextを踏むことなく、void **aにvoid *型の配列の先頭の番地を入れておいて、a+3を参照すればいいだけ。voidだと+できなかったっけ。+8*3してほしいが、まあいいや。
+
+　とにかく、matrixでやっているmatrixのdouble *の部分も、vector_listのlistの部分も、matrixはRGBに対応させる過程で、vector_listは*nextを配列に集めて使いやすくする過程で、結局pythonのリストに収束する。
+
+　2次元リスト。
+　for i in range(rows):
+            row = [0] * cols
+            self.matrix.append(row)
+　について。これは、ポインタの配列であるリストのそれぞれに、またポインタの配列であるリストのポインタを入れることで、二次元なリストを作っている。
+
+　これの作り方だが、matrixは可変長でなくていいので配列にしたわけだが、listは可変長である。100だけ確保しておいて、100を超えたら200まで確保して、というようにして可変長の配列をつくる。そして配列の中身はポインタ。結局以下のような、chatGPTが示したpythonのlistのc言語verのようになりそうだ。
+
+typedef struct {
+    int *data;       // 配列のポインタ
+    size_t size;     // 現在の要素数
+    size_t capacity; // メモリに確保している要素数（バッファ）
+} DynamicArray;
+DynamicArray *create_array(size_t initial_capacity) {
+    DynamicArray *arr = (DynamicArray *)malloc(sizeof(DynamicArray));
+    arr->data = (int *)malloc(sizeof(int) * initial_capacity);
+    arr->size = 0;
+    arr->capacity = initial_capacity;
+    return arr;
+}
+void append(DynamicArray *arr, int value) {
+    if (arr->size == arr->capacity) {
+        // 容量が足りなくなったら倍に拡張
+        arr->capacity *= 2;
+        arr->data = (int *)realloc(arr->data, sizeof(int) * arr->capacity);
+    }
+    arr->data[arr->size] = value;
+    arr->size++;
+}
+void free_array(DynamicArray *arr) {
+    free(arr->data);
+    free(arr);
+}
+
+　以下、listのインスタンスmethod一覧。
+a = [1, 2]
+append(x): リストの末尾にxを追加。引数はひとつだけなので同時に複数のオブジェクトを追加するならextendを使う必要がある。
+    a.append(3)  # a = [1, 2, 3]
+extend(iterable): 別のイテラブル（リストなど）の要素をリストの末尾に追加。return thisをしてくれないので引数にa.extend([3,4])を与えるとかはできない。
+    a.extend([3, 4])  # a = [1, 2, 3, 4]
+insert(i, x): 指定した位置iにxを挿入します。 
+    a.insert(1, 3)  # a = [1, 3, 2]
+remove(x): リストから最初に出現するxを削除します。該当する要素がなければValueErrorが発生します。
+    a = [1, 2, 3]
+    a.remove(2)  # a = [1, 3]
+pop([i]): リストのi番目の要素を削除し、その値を返します。引数iを指定しない場合、リストの末尾の要素が削除されます。
+    a = [1, 2, 3]
+    a.pop()  # a = [1, 2], 戻り値: 3
+clear(): リストのすべての要素を削除します。
+    a = [1, 2, 3]
+    a.clear()  # a = []
+index(x, [start], [end]):xが最初に出現する位置のインデックスを返します。startやendで範囲を指定できます。
+    a = [1, 2, 3]
+    a.index(2)  # 戻り値: 1
+copy(): リストのシャローコピー（浅いコピー）を作成します。
+    a = [1, 2, 3]
+    b = a.copy()  # b = [1, 2, 3]
+count(x): リストの中でxが出現する回数を返します。
+    a = [1, 2, 2, 3]
+    a.count(2)  # 戻り値: 2
+reverse(): リストの要素を逆順に並べ替えます。
+    a = [1, 2, 3]
+    a.reverse()  # a = [3, 2, 1]
+
+
+sort(key=None, reverse=False): リストを昇順にソートします。keyやreverse引数でカスタマイズ可能です。
+    a = [3, 1, 2]
+    a.sort()  # a = [1, 2, 3]
+　についてまとめる。aを書き換える関数で。新しくsortしたlistを生成せず、Noneを返すので注意。
+　bayesian.pyとsort_matrix.pyで別のソートを書いているので、1次元のlistに対し、sort関数を作りたい。比較は<をつかって、それぞれのオブジェクトの__gt__に任せることにする。なので、listの中身は任意のオブジェクトでいい。
+　そして、そのようなsort関数がすでに作られていた。keyは関数で、noneなら、a < bという比較をするが、key=lenというようにmethodを渡すと、len(a) < len(b)というように比較してくれる。
+　本質的に考えてこんなものが必要だと考えたときに、それがもうつくられているはずだと、その存在を予測するのはなんだかすごくセンスでいきている感じがしてとてもいい。
+　また、list.sort()以外に、sortedという静的methodも用意されていて、この関数はイテラブルなオブジェクト全てに対して使うことができて、さらにこっちは書き換えではなく生成して返す。実際につかって検証したい。
+　123, 1225, 12に対して、intの__gt__によるsortは、
+12
+123
+1225
+　として、strの__gt__によるsortは、
+12
+1225
+123
+　と並べる。12のあとは\0で、\0(00?)と2(32)を比較して並べている。
+
+　ls -Xのようなまず拡張子で辞書順sortして、つぎにそれぞれでファイル名で辞書順sortするには、
+sorted(str_lst, key=lambda file: (os.path.splitext(str_lst)[1], str_lst))
+　とする。ここで、lambdaは無名関数を作るための構文。一時的に簡単な関数を定義できて、
+lambda 引数: 戻り値
+　という構造。まあ、sortのkey引数くらいでしか使わないかもしれない。lambdaを使わずに書けば、
+def method(file):
+    return (os.path.splitext(str_lst)[1], str_lst)
+　を定義して、
+sorted(str_lst, key=method)
+　とすればいい。拡張子で辞書順sortしてファイル名で辞書順sortするという複雑なsortのコアになっているのは、lambdaではなく、tupleである。
+a.txt, b.wav, c.txt, d.bmp
+　というようなstrのlistをソートするときに、keyによって
+method("a.txt") < method("b.wav")
+　で比較を行うのだが、これは、
+(txt, a.txt) < (wav, b.wav)
+　を行っていて、tupleの__gt__()では、まずひとつめの要素txtとwavで比較を行う。この場合はtが先なので2つ目を比較せずに終わる。この結果はTrueになる。だが、
+(txt, a.txt) < (txt, c.txt)
+　という場合は、txtは同じなので、二つ目の要素であるファイル名で比較が行われる。a > cなので、この結果はTrueになる。
+
+
+
+
+
+　__getitem__()。sliceを受け取れる。
+my_list = [10, 20, 30, 40, 50]
+subset = my_list[3:4]
+print(subset)  # [40]
+　これはスライスと呼ばれる機能で、0, 1, 2...と数えて、3つめから4つめの手前まで抜き出す。a:bとしたときにaからb-1まで抜き出す。bは抜き出されないので注意。詳しくはslice参照。
+　これはlist特有のものではなく、list.__getitem__でsliceというオブジェクトを受け取ったときにlistがそう動くように設定されているだけ。詳しくはクラスの__getitem__に。
+
+
+　__mul__()。
+>>> a = [1, 2] * 2
+>>> a
+[1, 2, 1, 2]
+　掛け算するとリストをそのままつなぐ。
+
+
+　リテラル表記の一部である内包表記。
+my_list = []
+for x in range(5):
+    my_list.append(x * 2)
+　を、
+my_list = [x * 2 for x in range(5)]
+　の一文で書けるというもの。まずリテラル表記であることが前提な時点で、このようにしてインスタンスを生成できるものはすでに決まっていて、list, dict, set, generatorの4つのみ。
+my_dict = {x: x * 2 for x in range(5)}
+my_set = {x * 2 for x in range(5)}
+my_gen = (x * 2 for x in range(5))
+　という感じ。genに関してはgenerator参照。
+
+　あと内包表記には、ifのフィルターというのもあり、
+my_list = [x * 2 for x in range(5) if x % 2 == 0]
+　とすると、ifがTrueとなる要素だけにフィルターできる。
+
+　またこれはpythonの構文だが、C言語での
+a == 1 ? 'is 1' : 'not 1'
+　というのがあった。この式の値が条件式が真なら'is 1'という文字列に、偽なら'not 1'という文字列になるというもの。
+　これをpythonでは、
+'is 1' if a == 1 else 'not 1'
+　とかく。
+
+　__init__()。
+list(1,2,3)
+　というようにするとエラーが出る。引数はイテラブルなオブジェクトである必要があり、たとえば、tupleを使って、
+a = (1, 2, 3)
+b = list(a)
+　とすれば、1, 2, 3を持つlistを生成できる。
+
+
+
+
+
+
+
+
+
+
+
+
+
+　tuple。
+
+　簡単にいうと、リストの可変ではない版のオブジェクト。長さだけでなく、中身も不変なので注意。関数の戻り値を一時的にラッピングするくらいのイメージかもしれない。主なインスタンス関数は次の2つ。
+count(x): タプルの中で x が出現する回数を返します。
+    t = (1, 2, 2, 3)
+    t.count(2)  # 戻り値: 2
+index(x, [start], [end]): タプルの中で x が最初に出現する位置のインデックスを返します。
+    t = (1, 2, 3)
+    t.index(2)  # 戻り値: 1
+    
+　__getitem__。
+t[2]
+　という形で抜き出せる。()出ないことに注意。__getitem__で定義されているのだろう。listが[]で、tupleが()で、setが{}で、dictが{a:b}でというのはリテラル表記の話。
+
+　__repr__。
+>>> a.shape
+(4, 4)
+>>> a[:, 0:2].shape
+(4, 2)
+>>> a[:, 0:1].shape
+(4, 1)
+>>> a[:, 0].shape
+(4,)
+>>> np.ndarray((3)).shape
+(3,)
+>>> np.ndarray((3,3,3)).shape
+(3, 3, 3)
+>>> np.ndarray((3,3,3))[:, :, 1].shape
+(3, 3)
+>>> np.ndarray((3,3,3))[:, 1, 1].shape
+(3,)
+　という感じで、1次元のときだけ(1,)となるのがわからなかったが、tupleが要素数1のときに、そのように出力するようになっているようだ。というか、1要素のtupleを作るには、
+>>> type((1))
+<class 'int'>
+>>> type((1,))
+<class 'tuple'>
+　という感じで、(1)だとただの演算子の(2 * 3)の()になってしまうので、(1,2)と()に,を入れることではじめてtupleになる。1要素のtupleは(1,)とすることで作れるし、__str__も、
+>>> print((1,))
+(1,)
+　というように(1,)表記である。
+
+　__eq__。
+　おそらく各要素の__eq__で比較していて、
+>>> 1 == 1.0
+True
+　より、intは同じ値のfloat相手にTrueを返すが、
+>>> (1,2) == (1,2.0)
+True
+　でTrueを返す。
+>>> (1,2) == (1,3)
+False
+　もちろん一致していないとFalse。rmse.pyでndarray.shapeを==で結ぶときにつかった。
+
+
+
+
+
+
+　generator。
+　いまいちよくわかっていないが、printすると表示されない。strが定義されていないわけだが、これはそもそもgeneratorなので、呼び出しと同時にx * 2を計算しているのだと思う。まあそういうものもあるというだけで使うことはないと思う。
+　おそらくtupleを作ろうとしたところ、tupleは不変であるわけで、x * 2のような規則的な不変配列を入れておくくらいなら、その規則だけ保存しといて、呼び出しと同時に計算すればいい、ということなのだろう。だとすると、gen[3]が使えないのがすこし引っかかるが。
+
+　内包表記。listにまとめてある。()ならgeneratorなのだが、これが以外と便利で、
+max_size_len = max(len(strings.comma(os.stat(i).st_size)) for i in file_dir_lst)
+　という感じで使える。maxはintのgeneratorを受け取って、最大値を返す関数。ようは、
+max_value = max(iで構成されるint型のオブジェクト for i in lst)
+　という構造。
+
+
+
+
+
+
+
+
+
+　リテラル表記。
+
+　listではじめて理解した。list()はlist.__init__、つまりコンストラクタである。listは、
+a = [1, 2, 3]
+　というようにしてコンストラクタを使わずともインスタンスを生成できる特殊なオブジェクトであり、これはリテラル表記によるものである。
+
+int: 3
+float: 3.0
+str: "abc"
+list: [1, 2, 3]
+tuple: (1, 2, 3)
+dict: {'key': 'value', 'another_key': 42}
+set: {1, 2, 3}
+　がリテラル表記で、これだけでクラスを生成できる。自作クラスはこのようなものがないので、たとえばmatrixなら、
+print(matrix.Matrix(3,4))
+　とする必要があり、かならずコンストラクタを通す必要があるが、上のものは、
+print("abc")
+　というように、コンストラクタを使わずとも、リテラル表記でインスタンスを生成できる。
+
+　逆に、このリテラル表記がない場合、すべて自作オブジェクトのように扱うことになるのだろう。
+list(1, 2, 3)
+tuple(1, 2, 3)
+　いや、これそもそも1, 2, 3もリテラル表記なので、リテラル表記がないと何もできなくなる。
+
+　C言語でのリテラル表記はどうであったか。pythonではint, float, strもすべてオブジェクトとして扱って、最も基本的なオブジェクトは自作クラスである。そして、int, floatあたりのオブジェクトを特殊なオブジェクトとして扱うようにしている。
+　C言語では、1や1.2などは特殊なオブジェクトでもなんでもなく、
+a = 1
+　としたときに、aのバイナリを01 00 00 00にするだけである。ここで、オブジェクト指向の本質に近づけた。つまり、pythonはオブジェクト指向であり、C言語はバイナリ指向なのだ。
+　そして、Cでは配列以外にも構造体という形で異なる変数でもまとめて扱うことができるようになった。matrixは行列であり、構造体の勉強にとってとてもちょうどいいものだったのかもしれない。そして、行列演算をC言語の構造体で行うとき、いちいち、
+mat = init_matrix(3, 4)
+free_matrix(mat)
+　とする必要があり、演算に関しては、intやdoubleは
+a = b + C
+　とするだけでいいのに、構造体では、
+a = add_matrix(b,c)
+free_matrix(b)
+free_matrix(c)
+...
+　としなければならない。つまり、C言語ではint, double, charなどの扱いはできるが、構造体は特殊な変数として扱われていて、いちいち関数を用意して、+も使えず、initとfreeを繰り返すというとてもめんどくさい扱いになってしまう。ただ、matrixやlist、wavやbmpなど、最近では構造体で使うことがデフォルトになりつつある。これはyahooのプログラミングテストでなんとなく感じたはずだ。
+　そして、C言語でのこの構造体の扱い方を改善すべく作られたのがpythonのようなオブジェクト指向言語である。構造体を特殊な変数としてつかうのではなく、それどころか、構造体を最も基本的なオブジェクトとして扱い、intやstrを特殊なオブジェクトとして位置付けた。
+
+
+
+
+
+
+
+　リテラル表記のオブジェクトくらいは理解しておきたい。
+
+　dict。キーと値のベアの配列。
+>>> a = {1:3, "a":4, 3.5:[3,"a"]}
+>>> a
+{1: 3, 'a': 4, 3.5: [3, 'a']}
+>>> a[3.5]
+[3, 'a']
+　というように使う。キーはstrだけかと思っていたが、どうやらどのオブジェクトでもいいらしい。
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+　set。
+
+セット (set): 例 {1, 2, 3} は重複しない要素の集合を持ち、順序を持たないデータ型です。
+　とのこと。dictはjavaにも同じようなのがあった。おそらくstrと任意のオブジェクトのペアの配列なのだろう。setは重複をなくすのは理解できるが、順序がないは理解できない。メモリに格納している時点で順序はあるはずであり、順序をなくすことのメリットがわからない。
+
+　データすべてなくなって、二つのディレクトリに対し、再帰的にcmpをするdircmp.pyを作ることにした。ここで、rsyncのタイムスタンプ比較でなくバイナリ比較verを作ることになる。ふたつのディレクトリ内のフルパスのファイルのlistを作ったとして、
+X: ./a.txt, ./b.txt, ./c/d.txt, ./c/f.txt, ./c/g/h.txt, ./c/g/i.txt
+Y: ./a.txt, ./b.txt, ./c/d.txt, ./c/e.txt, ./c/g/i.txt
+　となったときに、
+file: X Y
+./a.txt: o o
+./b.txt: o o
+./c/d.txt: o o
+./c/e.txt: x o
+./c/f.txt: o x
+./c/g/h.txt: o x
+./c/g/i.txt: o o
+　というようにして比較したいのだが、listでどうすればこれができるか考えていた。XとYのlistで先頭から一致しているか確認していって、./c/f.txtと./c/e.txtでちがうとなるのだが、Xを進めて、./c/g/h.txtと./c/e.txtを比較するか、Yを進めて./c/f.txtと./c/g/i.txtを比較するか。
+　これをGPTに投げたところ、listではなくsetを使うと、集合として簡単にX & Yで共通集合、X - Yで差集合を取り出せるといわれた。そして、setの内部構造についても聞いた。
+
+　どうやらハッシュテーブルというものを用いているらしい。前にどこかでやったが、hash_table[100]という配列を作って、167が来たらhash_table[67]に入れて、216が来たらhash_table[16]に入れる。もし、216のあとに316が来たら衝突が起きる。これをハッシュ衝突という。これはあとで。
+　なぜこのようなことをするのかというと、listに216を入れた場合、216があるか検索すると右からすべて探索する必要がある。一方ハッシュテーブルは16にあるか検索すればいい。
+　極端な話、intを扱うならintのmax分メモリを確保して、216が来たら[216]に入れれば、探索時間は1にできる。ただ、メモリ消費がえぐいので、ハッシュ値で1000までにすれば、メモリ消費を1000までにできるということをしているのだろう。つまり、ハッシュテーブルとはメモリをたくさん使うことで、探索時間を最小限にするデータ構造であるといえる。
+　といってもすべてintとは限らず、strやfloat、さらにはMatrixのような構造体(クラス)にもハッシュ値を計算する__hash__()を設定できるわけで、一概にintのmaxというような上限を見つけ出すことはできないのだが。
+
+　ハッシュ衝突の対策法はいくつかあって、まずオープンアドレッシングについてまとめる。これは単純で、316をhash_table[17]に入れる。もし316を検索して[16]がNULLなら316はない、[16]に316があればありで、[16]に216があるのなら、[17], [18], ...と検索して316が来るまでにNULLが来れば316なしで、316が来れば316あり。
+　ただし、この方法だと、一部分にたくさんはいってしまうことがよくある。この集まりをクラスターといい、クラスターができると、NULLが来るまで探索することになるためハッシュテーブルのメリットである探索速度が失われる。
+　この方法はオープンアドレッシングの中でも線型探索というもので、ほかにも二次探索というものがある。こっちは316をいれるときに、[16]が埋まっていたら、[17]ではなく、16^2=256を計算して、[56]に入れるというもの。検索時も[16]に入っていたら、つぎは[56]がNULLか確認して、ということになる。これだとクラスター形成を防げるということだろう。
+　また、オープンアドレッシング以外にも、チェイン法というものもある。これは316をいれるときに[16]に216があったら、[216, 316]といったlistにまとめて、[16]にいれるというもの。
+
+　dircmpの話に戻す。このメモリをたくさんつかうハッシュテーブルというデータ構造なら、大きくメモリをとって、例えば、
+Xのハッシュテーブル, Yのハッシュテーブル
+./a.txt, ./a.txt
+NULL, NULL
+./b.txt, ./b.txt
+./c/d.txt, ./c/d.txt
+NULL, ./c/e.txt
+./c/f.txt, NULL
+./c/g/h.txt, NULL
+NULL, NULL
+./c/g/i.txt, ./c/g/i.txt
+NULL, NULL
+　というようにメモリ上に配置されているので、共通集合や差集合を簡単に求めることができる。setは順序がないの意味がわからないと最初に書いたがこういうことだったのだ。
+　あと、setは重複を自動でけすとあったが、どうやらハッシュ衝突が起きたときに、それぞれのオブジェクトを__eq__で比較して、一致したら追加しないというものらしい。
+
+　setのインスタンス関数についてまとめる。
+
+　__sub__()。
+s1 = {1, 2, 3}
+s2 = {3, 4, 5}
+result = s1 - s2  # s1.__sub__(s2) と同じ
+print(result)  # {1, 2}
+　差集合。s1に存在してs2に存在しない要素をsetにまとめて返す。
+
+　__and__()。
+s1 = {1, 2, 3}
+s2 = {2, 3, 4}
+result = s1 & s2  # s1.__and__(s2) と同じ
+print(result)  # {2, 3}
+　共通集合。s1にもs2にも存在する要素をsetにまとめて返す。
+
+|(__or__()): 和集合
+^(_xor__()): 和集合から共通集合を抜いた集合
+
+　__init__()。
+>>> a = [1,2,3,"ser",3]
+>>> set(a)
+{1, 2, 3, 'ser'}
+　という感じで、listをsetに変換できる。順序はハッシュ値かな。
+
+　add()。__add__()ではないことに注意。
+s = {1, 2, 3}
+s.add(4)
+print(s)  # {1, 2, 3, 4}
+
+　remove()。
+s = {1, 2, 3}
+s.remove(2)
+print(s)  # {1, 3}
+
+　__repr__()。
+{"adf", "sdf"}
+　というstrを返す。それぞれの要素は__str__()に従っているのだろう。__sub__()や__and__()でもし要素がない場合、空のsetを返すが、空のsetは、
+set()
+　という文字列になるので注意。絶対{}のほうがわかりやすいのに。
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+　range。
+　イテラブルなオブジェクトはいままででてきたtuple, list, set以外にもrangeがあるらしい。rangeってrangeていうオブジェクトだったのだと初めてしった。listを返す関数だと思っていた。まあ
+for i in range(5)
+　とかでしか使わないと思う。このrange(5)はrangeクラスの__init__なのだろう。
+　また、pythonには
+for(j = ((unsigned int)(i / deg) + 1) * deg ; j <= i + 1 ; j += deg)
+　のような始点、終点、ステップ単位をもとにした構文なないようで、
+for i in iter_object
+　とする必要がある。その代わりこのrangeオブジェクトが代わりを担っていて、上記の使い方以外に、
+range((int(i / deg) + 1) * deg, i + 1 + deg, deg):
+　という始点、終点、ステップ単位で生成する使い方もできるらしい。コンストラクタで引数の数で処理を変えているのだと思う。ただし、終点は<限定で、<=は使えないので、<=は、+deg(ステップ単位)にして<に変換する必要がある。
+　いや、rangeは整数しか扱えないらしい。くそ。しかたないので、whileを使うことにする。whileはC言語と同じなので。
+　検証。
+>>> for i in range(3):
+...     print(i)
+0
+1
+2
+>>> for i in range(2,3):
+...     print(i)
+2
+>>> for i in range(0,3,2):
+...     print(i)
+0
+2
+　つまり、引数が1つなら終点、2つなら始点と終点、3つなら始点と終点とステップ単位。
+
+
+
+
+
+
+
+
+
+
+　enumerate。
+
+for i, matrix in enumerate(vector_list):
+　について、enumerate()はenumerateオブジェクトのコンストラクタで、イテラブルなオブジェクトを引数にenumarateを生成する。enumarateはインデックスと元のオブジェクトの要素を、組にして保持するイテラブルなオブジェクトで、for i inに渡したときに、
+return i, element
+　という形式で返す。引数に['a', 'b']を与えていたら最初に、
+return 0, 'a'
+  で、次は、
+return 1, 'b'
+  である。
+　
+
+
+
+
+
+
+　slice。
+　sliceは所詮はslice(0,5,1)というような3つの値を持つオブジェクトである。ここで、listのsliceの処理をここでまとめる。といっても、ほかのslice対応オブジェクトも同様だとは思うが。
+slice(0,5,1)
+　をlistに与えると、わかりやすいようにforだけC言語にして、というかC言語のforもサポートしてくれていいじゃん、まあいいや、
+result = []
+for(i = 0 ; i < 5 ; i += 1):
+    result.appned(a[i])
+return result
+　という感じ。
+a = [5,6,7,8,9]
+　として、これらはそれぞれ0, 1, 2, 3, 4と数えることに注意して、
+a[0:4:1] -> [5,6,7,8]
+a[0:5:1] -> [5,6,7,8,9]
+a[4:0:-1] -> [9,8,7,6]
+a[4:-1:-1] -> []
+　これは、-1は最後の値、つまり4を指すので
+a[4:-1:-1] -> a[4:4:-1] -> []
+　ということ。なので[9,8,7,6,5]にするためにはNoneをつかう必要がある。NoneはC言語でのNULLで、
+>>> None
+>>> type(None)
+<class 'NoneType'>
+　である。内部的な処理としては、
+if start == None:
+    if step > 0:
+        start = 0
+    else:
+        start = len(self) - 1
+if stop == None:
+    if step > 0:
+        stop = len(self)
+    else:
+        stop = -1 # -1をlen(self)とするとコードがかけないので、ここでは-1は0のひとつ下とする。つまり、3<-begin, 2, 1, 0, -1<-endという感じ。
+if step == None:
+    step = 1
+　が正しいだろう。
+
+　slice.__init__について。print_matrixでコマンド引数としてsliceを受け取るようにしたいが、strの"0:5"をslice(0,5)に変換する必要がある。ここで、もしかしたらこれはすでにslice.__init__で実装されているのではないかと思ったのだが、
+>>> a = [1,2,3,4,5]
+>>> a[slice(0,5,1)]
+[1, 2, 3, 4, 5]
+>>> slice("0:5")
+slice(None, '0:5', None)
+>>> a[slice("0:5")]
+Traceback (most recent call last):
+  File "<stdin>", line 1, in <module>
+TypeError: slice indices must be integers or None or have an __index__ method
+　より機能しない。値にそのままstrが入っている。strは基本オブジェクトなのだから、ちゃんと対応してほしいが。
+
+self = str(self)
+str_lst = self.split(":")
+print(slice(str_lst))
+　つまり、slice.__init__にlistである、[3,4]を与えると、
+slice(None, ['3', '4'], None)
+　となる。listにも対応できてない。＊str_lstでアンパックしてstrings.__slice__完成。
+
+>>> slice()
+Traceback (most recent call last):
+  File "<stdin>", line 1, in <module>
+TypeError: slice expected at least 1 argument, got 0
+>>> slice(None)
+slice(None, None, None)
+>>> 
+　print_matrixのrow_sliceの初期化。:、つまりslice(None, None, None)が欲しかった。こういうのはメモにするとかでなく、pythonでちゃちゃっと実験したほうがいいかも。
+
+
+
+
+
+
+
+
+
+
+
+　ポインタについて。C言語でのポインタの始まりは関数で変数を書き換えられるかどうかの話だった。いまの理解では、関数では返せるのがひとつの変数のバイナリだけなので、複数の変数を返したい場合に、ポインタを与えて書き換えるというのが関数でのポインタの使い方。
+
+　C言語ではintなら09 00 00 00というようなバイナリが関数に与えられるわけだが、pythonではすべての変数がポインタを格納するポインタ変数になっていて、intを与えても09 00 00 00というバイナリが与えられるわけではなく、それが格納された番地が与えられることになる。具体的には、
+def modify_value(x):
+    x = x + 1
+value = 10
+modify_value(value)
+　のようなコードで、value = 10をmodify_valueに与えているが、これは0Aというバイナリを関数に与えているわけではなく、0Aというバイナリが格納されたメモリの場所(ここでは0X01とする)を与えている。そして、関数内で
+x = x + 1
+　としたとき、0x01に入っている0Aに1を足して、0Bというバイナリを新しいメモリを確保(0x02とする)してそこに格納し、0x02をxに代入している。しかし、呼び出し元のxが0x01を指しているのは変わらない。
+　もしこの関数でretuin xとすれば、呼び出し元で戻り値として0Bというバイナリが入った0x02が返されるので、
+value = modify_value(value)
+　とすれば、valueは0Bが入った0x02が入る。この際、0Aが入っていた0x01はどの変数にも入っていないため、ガベージコレクションで解放される。
+
+　これは、C言語でのstringの扱いに似ている。str_merge()を作ったが、新しいメモリを確保して、番地と容量を返しているわけで、使うたびにfreeをしていた。
+　stringは文字列の長さで確保するべきメモリ容量が変わるためこのようにするしかない。intは4バイトと決まっているのでこの必要はなかった。この二つは含有関係になっていて、前者は可変長のバイトを持つ文字列、ないしpythonの可変長版のintを扱うために必要なものである。これをpythonではデフォルトにしているのだろう。これもまさしく高級言語と言える。代償としてはこの高級な方法でしか変数を扱えなくなることだが。
+
+　このような変数を不変オブジェクトという。int, str, floatは不変オブジェクト。floatは8バイトで固定だが、毎回新しいメモリを確保しているとのこと。
+
+　といってもC言語でポインタを関数に渡したとしても、*x=3というようにしなければ、中身は書き変わらない。渡された引数xに直接3を入れても書き換わらないのはcでもPythonの不変オブジェクトでも、可変オブジェクトでも変わらない。可変オブジェクトでの
+a[3] = 4
+　や、
+a.set_value(2,2) = 3.4
+　というような関数に与えられたポインタが指すところに格納されたオブジェクトに中身を書き換えるようなインスタンスmethodが、不変オブジェクトにはないというだけ。
+
+　上ではポインタの起源が関数だったので、そこから掘り下げて不変オブジェクトの扱い方、そしてそれは結局すべてのオブジェクトでも変わらないという流れになっている。不変オブジェクトも、クラスの特殊なものと考えられるので、オブジェクトの中で最も基本的なものと呼べる自作クラスを作ることで、pythonのオブジェクトへの理解を深められるはず。
+
+
+
+
+　クラス。
+
+　そこで、pythonにおけるクラスについてまとめる。
+　
+　matrix.cからMatrixクラスを自作する。まず、クラスについてはjavaで学んだ通りである。構造体と関数の融合で、これは結局matrix.cのように構造体とそれを扱うための関数をライブラリとして作ることが多かったことによるだろう。内容としては、インスタンス変数、クラス変数、コンストラクタ、インスタンスmethod、クラスmethodがあるのはjavaで学んだ。pythonではこれに静的メソッドが加わる。これの違いの鍵はサブクラス、つまり継承だが、これについてはあとで述べる。
+　コンストラクタはその構造体を生成するものすべてが当てはまり、init_matrixはもちろん、list_to_matrix、import_from_matなども当てはまる。list_to_matやらmat_to_listやら、いろんなデータ型の間で変換する関数があるわけだが、自分自身が変換先である関数をすべて集めて、引数の数やtypeで場合分けすることでまとめてひとつのコンストラクタにすると便利。というかこれは、matrixにrow, col, dataだけでなくnameを作りmatrixといれておくだけでCでも実現できる。
+　インスタンスmethodは、その構造体を引数にもつ関数とするのがいい。freadは(void *, int size, int block_num, FILE *)という引数をとるわけだが、FILEオブジェクトのインスタンスとして作って、file.read(void *, int size, int block_num)としてもいいし、matrixオブジェクトのインスタンスとして作って、mat.export(FILE *, int size, int block_num)としてもいい。matについては、matrixオブジェクトのサイズが決まっているのと、FILEより、str file_nameのほうが使い勝手がいいことから、mat.export(char *file_name)というようにした。
+　あと、関数名がかぶるのを防ぐため、export_matrix(MATRIX *mat, char *file_name)とすることがC言語では多かったが、クラスのインスタンスmethodではこの必要もない。mat.export(file_name)というようにとてもきれいにかける。
+
+
+
+　インスタンス変数の動的確保。javaではインスタンス変数を、
+int a ;
+unsigned int b ;
+　というようにC言語での構造体のようにして、クラスの先頭で定義して、クラス変数はstatic修飾子をつけることで定義した。修飾子についてはjava.txt参照。pythonでは上にかいたとおり、
+a = 3 ;
+　だけで変数の定義も同時に行うわけだが、クラスにおいてはコンストラクタで
+    def __init__(self, row, col):
+        self.row = row
+        self.col = col
+        self.matrix = [0.0] * (row * col)
+　というようにしてインスタンス変数を定義する。これはかなりわかりやすく、合理的である。ただ、インスタンス変数は__init__以外でも定義できてしまう。インスタンス関数や、importしたスクリプト内で、
+mat = matrix.Matrix(3,4)
+　とすれば、__init__で定義された、row, col, matrixで構成された構造体がmallocされるわけだが、いきなり、
+mat.a = 3
+　とすると、このインスタンスに限って、aというインスタンス変数が追加される。使い道は今のところわからない。クラス変数も同様に
+Matrix.a = 3
+　とすれば動的に確保できる。
+
+　どのようにしてこれを可能にしているのかは、クラス、つまり構造体がメモリ上でどのように格納されていて、mat.a=3としたときに、どのようにして拡張されるのか理解する必要がある。
+　これのためにはメモリの中身を見る方法を見つける必要がある。勉強用のところにまとめてあるが、たしか上手くいかなかった気がする。
+　chatGPTに聞いたところ、どうやらクラスのインスタンス変数、つまり構造体はdict形式になっているらしい。たしかに構造体とdictは似ているし、dictで構造体を作ることも可能だろう。まあ構造体はメモリにはその値があるだけでその領域をその構造体として扱うことでなりたつが、dictはstrとvoid*の組なので、よりメモリを食うとは思うが。
+
+
+
+　また、__で囲われるmethodは特殊なmethodであり、ほかに
+def __str__(self):
+    result = []
+    for r in range(self.row):
+        result.append(self.matrix[r * self.col : (r + 1) * self.col])
+    return '\n'.join([str(row) for row in result])
+　がある。これはprint関数に引数として与えられたときに変換される文字列を設定するものであり、intでいうatoiである。C言語ではatoiを使って文字列に変換してからputsするのがデフォルトで、それがめんどくさいのでatoiを組み込んだprintf関数が作られたのではないかと個人的には思っている。pythonではatoiをprintf関数に組み込むのではなく、intというオブジェクトに組み込むのだ。つまり、オブジェクトでちゃんと__str__が設定されていれば、print(a, b)とするだけで任意のオブジェクトを引数に使える。これはほんとに素晴らしい。
+
+
+
+__repr__
+　はインタラクティブモードでmatと打ったときに表示される文字列。インタラクティブモードではprint(a)とせずとも、aとするだけで表示されるので、変数だけをうつと自動でprintが使われるのかとおもったが、そういうわけではないらしい。つまり、別途__repr__で文字列を定義する必要がある。
+　といっても、strもfloatもprint(a)とaで表示される文字列は同じなので、
+def __repr__(self):
+        return self.__str__()
+　でいいと思う。
+
+
+
+　__getitem__と__setitem__でmat[3]というようなインデックスを用いた参照が定義できる。listもこのように定義されているのだろう。tupleも参照はt[2]のように[]を使うので、getitemだけ定義されているはず。
+　また、a[4,3]とすると、これは複数引数の扱いになり、つまりidxにtupleが入ることになる。これはmatrix.pyのコードを見たほうがわかりやすい。
+　また、__call__でmat(3,4)としたときに返す値を設定できる。Matrix(3,4)は__init__であることに注意。これはMatrixクラスのインスタンスmatをそのまま関数として使えるようにできるものだが、getitemと同様の処理にすればa(3,4)で値を得られるようになる。ただし、a(3,4)=4というように値を代入することはできない。関数は値を返すものであり、標準的な記法として、a[3,4]は中身の値、a(3,4)は値を返す関数なのだろう。これを考えるとa(3,4)としてgetitemの代わりにするのはpytonの記法に則っておらず、本質的でない。
+
+　スライスについて。__getitem__が定義されているクラスのオブジェクトに対し、mat[3:4]とすることでsliceを与えられる。
+
+　実際、コードでは、
+class MyList:
+def __init__(self, data):
+    self.data = data
+def __getitem__(self, index):
+    if isinstance(index, slice):
+            return MyList(self.data[index])
+　というようにする。といっても、これはsliceに対する挙動を設定しているというより、たとえばmatrixなら、matrixの各行のリストを作り、それぞれにsliceを与えて帰ってきたlistで行列をつくるというような、あくまで、listにsliceの処理を任せているだけ。
+
+　3:4はsliceのリテラル表記ではなく、
+mat.__getitem__(slice(1,5,2))
+　を
+mat[1:5:2]
+　と書けるという構文でしかない。必ずしもmat.__getitem__()とmat[]が同じなわけではなく、たとえば、
+mat[3,4]
+　は実際は、
+mat.__getitem__((3,4))
+　であり、
+mat.__getitem__(3,4)
+　ではない。こうすると、
+>>> mat.__getitem__(2,2)
+Traceback (most recent call last):
+  File "<stdin>", line 1, in <module>
+TypeError: Matrix.__getitem__() takes 2 positional arguments but 3 were given
+　このような引数が多いというエラーが出る。__で囲われる関数は特殊な関数であり、引数の数も決まっていて、その関数をmat[]とか、+とかで呼び出せると決まっているわけだ。+は左右の2値をそのまま__add__に与えるが、mat[]は中身をそのまま__getitem__に与えるわけではなく上のような構文を元に与えるものが変換される。
+　ちなみに、構文を使わずに、
+mat[slice(1,5)]
+　とすれば、
+mat.__getitem__(slice(1,5))
+　になる。
+
+　これに似ているのが、関数にgeneraterを与えるもの。generaterはリテラル表記のところを参照してほしい。sum()はgeneraterを引数にするのに対応していて、
+>>> gen = (1 for _ in range(5))
+>>> sum(gen)
+5
+　とできるが、これをおそらく構文として、
+>>> sum(1 for _ in range(5))
+5
+　とすることもできる。ただし、これはより正しく書くなら、
+>>> sum((1 for _ in range(5)))
+5
+　が正しいはずだ。リテラル表記ではなく、関数の()に直接generaterを記述する、つまり、
+>>> sum(1 for _ in range(5))
+　とすることで、
+>>> sum((1 for _ in range(5)))
+　に変換されるということ。ただし、generater, intの二つの引数に対応しているmethod()にたいし、
+method((1 for _ in range(5)), 5)
+　とはできるが、
+method(1 for _ in range(5), 5)
+　とはできない。この構文は簡単に書ける文、引数はひとつという縛りがある。
+
+　ちなみにsliceは__getitem__だけでなく、__setitem__でも使える。まあつまり、上のような
+a[:] = value
+　としたときに、
+__setitem__(slice(None), value)
+　を呼び出す構文があり、__setitem__でちゃんと処理できればsliceも使えるということ。実際、ndarrayの__setitem__ではsliceが使えて、
+a[:, i] = vec[:, 0]  # aのi列目に上書き
+　というように、i列をndarrayで上書きできる。まあこれはnumpy.txtに書くべきで、こちらでは実際に自分で__getitem__でのslice処理を書くべきかもしれないが。一応、同じものをnumpy.txtに乗せてある。
+
+
+
+　__eq__。
+　自作クラスにおける==は自分で設定しないと、isと同じポインタの比較になってしまうらしい。returnでboolオブジェクトを返すような__eq__関数を定義しておくと、その関数を==にできる。つまり、Matrix型のa, bに対し、a==bとでたとき、a.__eq__(b)の値になるということ。
+　boolは0か1かの変数。てっきりintを使っているのかと思ったが、type(1==1)としたらboolとでたので、boolというオブジェクトがあるのだろう。==や!=やnotなどの論理演算子が返す値として理解しておく。また、==と!=はオブジェクトを引数にとるので、オブジェクトで設定するが、not, or, andはboolを引数にboolを返す関数としてとらえることができる。
+　==, !=, <, >, <=, >=はそれぞれ、__eq__, __ne__, __lt__, __gt__, __le__, __ge__で定義できる。
+
+
+
+　__bool__。boolオブジェクトへの変換を定義するもの。
+if mat
+　としてときに呼び出される。
+
+
+
+　__len__。len(mat)としたときに返すintを設定できる。
+
+
+
+　これと同様に+, -, *, /, //, %, **をそれぞれ、__add__, __sub__, __mul__, __truediv, __floordiv__, __mod__, __pow__で定義できる。
+　また、-aとしたときの値は__neg__で定義できる。__add__はself, otherに対して値をreturnする2変数関数だが、__neg__はselfに対して値をreturnする1変数関数であることに注意。
+
+　/は浮動小数点、//は整数乗算で、C言語では1/2は0になってしまうので、(double)1/2とする必要があるが、pythonでは/に与えられた時点で(double)にキャストされるようになっているのだろう。そして、それでもrandom() / 83のように、切り捨てが便利のときもあるので、C言語の/は//として使えるようにしたのだろう。いちいち/の引数がdoubleか確認して、intなら(double)と毎回つけていたので、これはいい仕様だと思う。
+　注意すべきは6/3でも2.0、つまりfloatを返す点である。/は両方をfloatに変換してfloatを返し、//は両方をintに変換してintを返す。
+
+　また、C言語では%はfloat64には使えなかったが、
+>>> 5.9 % 4.3
+1.6000000000000005
+　というように使えるようになっている。a % bとしたとき、bを定数倍していき、a < bとなる一歩前のbに対し、a-bを計算して、その値をreturnしているのだろう。C言語で実装しようにも、カスタム演算子はつかえないので不可能。mod(double, double)とでもしようか。いや、オーバーロードもできないので、mod_ddか。
+
+　**はべき乗。C言語では**はないので、pow(3,4)が81を返すように作っていた。addmatrixもそうだし、やはり演算子を自分で定義できるのはとても便利だと思う。まあ**が設定できる演算子としてあるので、演算子が設定できるからではなく、**が定義されているからだが。
+　ちなみに、
+>>> 2 ** (1/2)
+1.4142135623730951
+　となっていて、sqrtにも対応している。つまり、intがint.__pow__(float)という形に対応していて、sqrtを計算してくれる。
+　あと、^はべき乗ではなく、xorの演算子らしい。__xor__で定義できる。論理演算子ではなくビット演算子で、
+>>> x = 5
+>>> y = 3
+>>> 5 ^ 3
+6
+　となり、5(101) ^ 3(011) = 6(110)という意味。自作クラスでは、^を__xor__でべき乗として定義することもできるが、pythonの記法に則っていない気もする。
+　まあ、演算子も所詮、add(a, b)をa + bとかけるようにしているというだけで、本質は関数である。3 + 4 * 3なら、add(3, mul(4, 3))としているだけ。
+　優先順位は** > *, /, // > +, -。
+
+　__add__について、add_matrix()はclassmethodとして定義しようと思っていたが、__add__で定義したほうがよさそうだ。chatGPTに投げると、
+def __add__(self, other):
+    result = Matrix(self.row, self.col)
+    for i in range(self.row):
+        for j in range(self.col):
+            result.matrix[i][j] = self.matrix[i][j] + other.matrix[i][j]
+    return result
+　にするといいと返ってきた。Matrixとしているので、静的methodのように、サブクラスを作ったときにサブクラスではなくMatrixクラスになってしまう。そこで、classmethodのclsのようにできないか聞いてみたところ、
+result = Matrix(self.row, self.col)
+　を
+result = type(self)(self.row, self.col)
+　とすればいいと返ってきた。type()は<class 'list'>という文字列を返す関数だと思っていた。isinstanse()でクラスを引数に与えるというのがでたが、どうやらtype()はクラスを返すらしい。それゆえ、このようなことができるのだろう。methodの引数にインスタンスだけでなく、クラスやmethodを与えることができる。詳しくはmethod、関数のところ参照。
+print(list)
+a = []
+print(type(a))
+　のどちらでも<class 'list'>と表示されるので、これはtype()の返す文字列ではなく、クラスをprint()に与えたときの文字列なのだ。注意すべきはインスタンスをprint()に与えたときの文字列を定義するのが__str__で、クラスをprint()に与えた文字列はただのクラスの名前になるということだ。
+
+　ちなみに__add__のように、演算子の挙動を定義することをオーバーロードという。サブクラスで関数を上書き変更するオーバーライドと似ていて紛らわしいので注意。javaではオーバーロードは同じ名前の関数を引数の型や数で区別して定義することである。つまり、定義、というような意味になるのかな。
+
+　b.__radd__でa + bというように右にきたときの処理を定義できる。この場合、a.__add__とb.__radd__が競合するわけだが、a.__add__が優先される。
+　a.__add__が定義されていない、あるいはNotImplementedをreturnしたときにb.__radd__に移る。なので、__add__で与えられた引数が想定されたオブジェクトでない場合、raise TypeError()ではなく、return NotImplementedで終了したほうがいい。これは、Return NotImplementedを返すとPythonは次の演算候補であるb.__radd__に移動するが、raise TypeError()すると、その時点でエラーが発生し、計算が終了してしまうためである。
+　__radd__で引数が想定外のオブジェクトだった場合は、raise TypeError()でいいが、仮にreturn NotImplementedとしてもpython側が演算ができないとして、raise TypeError()をしてくれるらしい。
+　自分で実験したほうがいい。まあ、__radd__を使うことはなさそうではあるが。ようは+を使う場合は左の__add__にしたがうと思ってプログラミングすればいいだけなので。
+
+
+
+　__iter__、イテラブルについて。list(a)で任意のオブジェクトをlistに変換できる原理について探るため、pythonのobjectのデータ構造についてchatGPTに聞いていた時にでてきたもの。
+a = [1, 2, 3]
+for i in a
+　というforの特殊な構文があるのだが、この構文をつくるためにわざわざオブジェクトのデータ構造を設定している。具体的には、クラスでどのようなデータ構造にするかは任意だが、1つめはこれで、2つめはこれで、これが20個まである、というように設定しておくことで、for i in aという構文に使うことができるということ。__str__を作って、print(a)とするだけで文字列に変換して標準出力できるようにしているのと似ている。
+
+　matrix.pyを参照してほしい。for i in matとしたときに、
+tmp = iter(mat)
+i = tmp.__next__()
+　が何回も繰り返される。iter()はmat.__iter__()を呼び出して、MatrixIteratorクラスのインスタンスを生成する。MatrixIteratorクラスはカウンタだと思っていい。インスタンス変数にindexをいれておいて、インスタンス生成時にコンストラクタで0にする。そして、tmp.__next__()ではmatrix[index]を返すとともに、indexをインクリメントする。
+　MatrixIteratorには__iter__はいらないはずで、実際Matrixの__iter__とMatrixIteratorの__next__だけで動作した。しかし、形式上MatrixIteratorにも__iter__をつくりreturn selfとしたほうがいいらしい。for i inのあとにMatrixIteratorを入れることはないので必要ないはず。__iter__なしにしといて、エラーがでたらなぜ必要になったか探ることにする。
+
+　あと、__next__で返すのはmatrix[index]で、つまりfloatである。不変オブジェクトなので書き換えはできない。
+for i in mat:
+    i = 3.0
+　としても書き換えができないのは、iに書き換えできるインスタンスmethodがないからで、強いてできるとすれば、
+for i in mat:
+    i.fill(3.0)
+　のようなものだ。ここで、各要素ではなく、行を返すことを考える。matrixの行をスライスで切り出して返しても、__getitem__が使われ、新しいlistを生成して行をコピーして返すわけで書き換えは反映されない。matrixを二次元listにすれば、行のlistがrows分集まっただけになるので、その行のlistのポインタをreturnすれば、書き換えは可能。つまり、
+for i in mat: # iはmatの各行のlist
+    i[3] = 4.0
+　とすれば書き換えは可能である。ただ、
+for i in mat:
+    for j in i:
+        j = 3.0
+　は書き換え不可能。
+for i in mat:
+    for j in range(mat.cols):
+        i[j] = 3.0
+　ならいけるか。
+
+　iterableであることをifで判別する方法。
+>>> from collections.abc import Iterable
+>>> isinstance([3,2], Iterable)
+True
+>>> isinstance(3, Iterable)
+False
+>>> 
+　という感じで、iterableなオブジェクトはcollections.abc.Iterableを継承している判定になるようだ。自作クラスであるmatrix_handmade.Matrixでも機能した。どうやら明示的にcollections.abc.Iterableを継承せずとも、__iter__()というインスタンス関数があれば、継承していることになるらしい。これは、collections.abc.Iterableが仮想基底クラスABCであるからとgptが言っていたがよくわからなかった。
+import collections.abc.Iterable
+　とすると、
+ModuleNotFoundError: No module named 'collections.abc.Iterable'; 'collections.abc' is not a package
+　というエラーがでる。なぜかは不明。
+
+
+
+
+
+　さて、クラスmethodと静的methodのちがいについてだが、たとえばimport_matrix_from_mat(char *file_name)なら、
+    @classmethod
+    def read_mat(cls, file_name):
+        with open(file_name, "rb") as mat_file:
+            row, col = struct.unpack("II", mat_file.read(8))
+            mat = cls(row, col)
+            matrix_values = struct.unpack(f"{row * col}d", mat_file.read(8 * row * col))
+            mat.matrix = list(matrix_values)
+        return mat
+　と、
+    def read_mat(file_name):
+        with open(file_name, "rb") as mat_file:
+            row, col = struct.unpack("II", mat_file.read(8))
+            mat = Matrix(row, col)
+            matrix_values = struct.unpack(f"{row * col}d", mat_file.read(8 * row * col))
+            mat.matrix = list(matrix_values)
+        return mat
+　のどちらでもいい。これらはクラス変数へのアクセスの可否とMatrixクラスを継承したサブクラスを作ったときの挙動が異なる。
+　クラス変数はjavaで学んだ通り、インスタンスに共通するクラス全体の変数。実際matrix.cでつかえるものはないが、すべてのインスタンスを合計したメモリ使用量などを入れておくことができる。これはあとで実装してみたい。まあ、クラス変数にアクセスする必要のあるmethodはあまりなく、read_matももちろん不要なので今回の静的methodとclassmethodの違いにはあまり関与しない。
+　あとで気づいたが、クラスにおけるクラス変数は、モジュール、つまりpyファイルにおけるグローバル変数である。これはsys.stdoutあたりのところに書いているはず。モジュール変数かな。
+　で、C言語においてライブラリに構造体と関数をまとめているわけだが、その.h,.cファイルにグローバル変数を設定することで、たとえばprogress.cでi==0でclock取得して、i==maxで計算時間を表示ということができる。そしてこれがまさにクラス変数やモジュール変数とおなじ役割なのだ。
+　静的methodとclass methodの違いについてだが、前者はclsとなっているため、たとえばMatrixクラスを継承して、int_matクラスを作ったときに、
+mat = cls(row, col)
+　の部分で、matにint_matクラスのインスタンスが入ることになる。一方後者では、
+mat = Matrix(row, col)
+　とMatrixと明記してしまっているため、継承したときにMatrixのままなので、書き直す必要がでてくる。これはかなりわかりやすい。
+
+
+
+
+
+
+
+
+
+
+
+
+　サブクラス。継承。
+
+　Aクラスを継承したBクラスをつくり、Bクラスで追加したいmethodを書くだけで、Aクラスを自分なりに拡張することができる。Aクラスにmethodを追加すればいいのではと一瞬思ったが、たとえばこれが自作ではなく外部のライブラリだったりしたときに、できれば元のライブラリのコードはそのままにして、拡張するということができるので意外と便利。あと、matrixでいうなら、double型のMatrixを継承して、int型のMatrixを作るときとかに使える。doubleのMatrixにあるすべてのmethodを変える必要があるなら、ただ新しくクラスを作ればいいだけなので継承の意味はないのだが。まあこれは実際に自分で作ってみよう。
+　ndarrayの継承で、np.algあたりの関数が使えなくなるとおもい、断念していた。だが、cppでmatrixを継承したconfusion_matrixをつくったのと、多数決がおかしくてpythonを呼び起こした関係で、やってみようとおもった。
+　そして、どうやらその心配はないらしい。javaではclass Aを継承したclass Bを作ったときに、A型のポインタ変数にBをいれることができるので、Aを引数に受け取る関数にBを渡すことができる。pythonではそもそも引数の型がすべてpy_objectであるわけで、オーバーロードではなく、関数内でisinstanceで条件分岐することでさまざまな引数の型に対して関数の挙動を定義しているわけだが、このisinstanceは"np.ndarray"とmatが与えられたときにmatがnp.ndarrayだけでなく、そのサブクラスである場合にもtrueを返してくれる。
+　また、arg2 :intというようにした場合も、これはサブクラスの場合はエラーを返さないので問題なく使える。
+
+class Parent:
+    def greet(self):
+        print("Hello from Parent!")
+class Child(Parent):
+    pass
+c = Child()
+c.greet()  # "Hello from Parent!"
+　というように使う。passは空のクラスや関数は空のままだとエラーがでるが、passと書くことでエラーを出さずに空のまま定義できるというだけ。
+
+class Parent:
+    def __init__(self):
+        print("Parent Constructor")
+class Child(Parent):
+    def __init__(self):
+        super().__init__()  # 親クラスのコンストラクタを呼ぶ
+        print("Child Constructor")
+c = Child()
+　というように、super().で親クラスの関数を参照できる。たとえば、matrixでstrが引数のときだけファイル名として読み込む処理をして、それ以外はnp.ndarrayのままにしたい時とかに使える。
+
+　ちなみに、cppではコンストラクタを引き継ぐときは特別なことを書く必要があったが、pythonではその必要はない。
+
+　ただ、numpy.ndarrayの継承をしたところ、__init__の上書きではうまくいかなかった。どうやらnumpy.ndarrayは__new__()でメモリ確保を行ってから__init__を読んでいるようで、np.ndarray((3,3))としたときに、最初に呼び出されるのは__new__((3,3))のようだ。なので、
+def __new__(cls, *args):
+        if len(args) == 1 and isinstance(args[0], str): 
+            if args[0].endswith(".cmat"):
+                with open(args[0], 'rb') as f:
+                    rows, cols = struct.unpack('II', f.read(8))
+                    result = np.fromfile(f, dtype=np.float64) 
+                    return result.reshape((rows, cols)).view(cls)
+        else:
+            return super().__new__(cls, *args)
+　というようにしたら、matrix(str)のときだけ定義した挙動、matrix((3,3))などはnp.ndarrayと同じ挙動にすることができた。ポイントは.view(cls)で、これがないとmatrix(str)が生成するものがnp.ndarrayになってしまう。super().__new__(cls, *args)はclsがmatrixであるからかmatrixだったが。
+　ただ、ここらへんは__new__をつかった自作クラスをつくり、本質的に理解する必要があると思う。
+
+
+
+
+
+
+
+　とはいえ、
+type(self)(3,4)
+　というように引数のクラスを取得し、そのコンストラクタを指定することができるので、そこまで機能に違いがあるわけではない。
+　いや、selfはインスタンスmethodでしか使えないので、もしMatrixクラスの静的methodでMatrixクラスを使う場合は、Matrixと書く必要がある。
+　なので、Matrix内の静的methodは、そのmethodないで一度もMatrixがでてこないようなmethodであるべきで、もし出てくるなら、上に書いた理由で、クラスmethodにして、clsを使ったほうがいい。
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+　ガベージコレクション。java.txtに書いたとおりそのポインタを格納する変数がなくなれば自然にfreeしてくれる機能なのはもう理解しているだろう。実際C言語では
+printf("%s", str_merge()) ;
+　と一文でかきたいものの、これだとfreeできないので、
+char *a=str_merge(...) ;
+printf("%s", a) ;
+free(a) ;
+　とするしかなかった。だが、pythonのようなガベージコレクションがあれば、
+printf("%s", str_merge(...)) ;
+　と一文でかける。ほかにもadd_matrixなどでも、
+multiply_matrix(imvert_matrix(multiply_matrix(a, temporal_matrix(b))), a)
+　というように一文でかける。ガベージコレクションは不変オブジェクトの再利用とセットであり、下に不変オブジェクトの再利用についてまとめているので参照。
+
+
+
+　不変オブジェクトの再利用について。同じ0.0を入れた場合どちらも同じメモリの番地が表示される。これはたしかjavaのstring型ででてきたものと同じで、pythonの不変オブジェクトであるint, str, floatも同じ仕様。
+　不変オブジェクトはcでのstr_merge()の挙動のように、変更するたびに新しいメモリを確保してそこにいれて、元のメモリの中身は変えない。これは上で理解した通り。そして、この利点として、同じ値を持つ不変オブジェクトは、理論的には同じメモリ領域を共有できるという可能性がある。というか、効率的なメモリ確保ではそうしたほうがいいはず。
+　ただ、可能性というだけで実際はコードによってこのようになるかならないかわかれる。
+
+mat.fill(0.0)
+mat.set_value(0, 0, 4.21)
+mat.set_value(0, 1, 4.20)
+print(id(mat.get_value(0,0)), id(mat.get_value(0,1)), id(mat.get_value(0,2)), id(mat.get_value(0,3)))
+　で、
+139672613067728 139672613067280 139672613067472 139672613067472
+
+mat.fill(0.0)
+mat.set_value(0, 0, 4.21)
+mat.set_value(0, 1, 4.21)
+print(id(mat.get_value(0,0)), id(mat.get_value(0,1)), id(mat.get_value(0,2)), id(mat.get_value(0,3)))
+　で、
+139931264801744 139931264801744 139931264801488 139931264801488
+
+　つまり、0.0で初期化された(0,2)と(0,3)が同じメモリを参照していること、また、(0,0)と(0,1)で、同じ値を入れたときに、ちゃんと同じメモリを参照している。
+
+　しかし、このように再利用に成功しているのは、コードが単純だからである。Pythonの実装（特にCPython）では、数値や文字列のキャッシュメカニズムは特定の最適化に依存しており、常に保証されるものではない。たとえば、計算結果の浮動小数点数は新しいオブジェクトとして作成されることが一般的らしい。
+
+
+
+　さて、これをcで実装することを考えよう。まず、すべての変数をpythonのオブジェクトのようにポインタで管理することを前提とする。そして、str_mergeのように中身を書き換えないことも前提とする。
+　新しく17.3という値がでてきたときに、いまもっているすべての変数の中身を検索して、同じ値があれば、その変数のポインタをそこにあてがう。中身は書き変わらないので変な挙動は起こらない。そして、ガベージコレクションにより、ポインタを保有する変数の中身を書き換える際にそのポインタを参照しているのがそれだけならfreeする。そう考えると、ガベージコレクションとこの仕様は似ているかもしれない。
+
+　すべての変数をポインタ変数としてその一覧を左側に、mallocしたものをオブジェクトとしてその一覧を右側に表示しているのを想像するとわかりやすい。左のそれぞれの変数には右のオブジェクトのうちどれかが入っていて、オブジェクトには何個の変数に入っているのか数字をかいておく。新しくオブジェクトを作成したときにすでに同じオブジェクトがあればそれを利用して、オブジェクトの数字をひとつあげる。変数の値を新しいオブジェクトを入れるかすでにあるオブジェクトをいれるかで書き換えるときに、その変数が保有していたオブジェクトについて、数字が1、つまりほかの変数が保有していないならfreeする。
+　ただ、静的変数だけでなく、オブジェクトがオブジェクトを参照していることもあるので注意。というか、int, double, str以外の[], (), 自作クラスはこれなので、ほとんどがあてはまっている。
+
+
+
+　毎回mallocしていてはおそくなってしまうのではと思ったのだが、どうやら次のような仕様らしい。
+
+-5～256の整数は、Pythonプログラムの実行時に事前にメモリに確保され、再利用されます。この範囲の整数は新たに malloc() を呼び出すことなく、常に同じメモリ領域を参照します。
+小さなオブジェクト（256バイト以下）は、Pythonのメモリプールによって効率的に管理されます。メモリプールでは、一度に大きなメモリ領域を malloc() し、その領域から必要な部分を小オブジェクトに割り当てる仕組みです。
+大きなオブジェクトについては、malloc() によって個別にメモリが確保されますが、これは必要に応じて行われます。
+小オブジェクトアロケータ：Pythonのメモリ管理システムには、「プールアロケータ」という仕組みがあり、あらかじめメモリを確保しておいて、小さなオブジェクトを作る際にこのプールからメモリを割り当てます。このため、プログラムが新しい小さなオブジェクトを作る際には毎回 malloc() を呼び出す必要はありません。
+
+　つまり、さきに1000byteくらいをmallocしておき、そこからメモリをあてがう。さらに-5~265までの整数は使われずともプログラム開始時につくっておく。これにより、for(i = 0 ; i < 5 ; i++)とかでは、iはすでに確保されている、
+0x00: 0
+0x01: 1
+0x02: 2
+0x03: 3
+　というようなメモリを利用して、ただiの中身を0x00から0x05まで書き換えるだけ。これならcのiの中身を0から5まで書き換えるのと動作は変わらない。まあcはintなら4バイトで、pythonはポインタなので64bitなら8byteだが。
+　また、大きいサイズに関しては毎回mallocする。これはcでもMATRIXなどそうしているのでそうするしかないのだろう。まあ、forの中で大きな行列のmultiply()をやるときなどは毎回mallocすることになるわけだが、きっとここらへんも最適化しているのだろう。つまり、str, int, floatを不変オブジェクトとして使う場合のこまごましたmallocはプールアロケータによって最適化されていて、とくに-5~256まではcとほぼ変わらない速度になっているということだ。
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+　ライブラリについて。まず、
+import sys
+print(sys.path)
+　を実行した際に表示されるパスを参照する。この仕組みはコマンドを打ったときにPASSにあるファイルを探索するのと同じ。作業ディレクトリのパスとライブラリのパスが含まれていて、特別パスに追加したい場合は、
+import sys
+sys.path.append('/path/to/your/module/directory')
+　というようにして追加する。毎回追加するのがめんどくさい場合は、
+export PYTHONPATH="/path/to/your/directory:$PYTHONPATH"
+　というように、環境変数であるPYTHONPATHに追加すればいい。ただ、ログインのたびに実行しなければならないため、bashrcなどに書いた方がいい。pythonの設定ファイルとかではなく、PYTHONPATHを参照するしくみは特殊に感じるが、意外といいのかもしれない。nginxのようなものであれば設定ファイルの方がいいが、pythonのようなコンパイラーに対して、設定ファイルを編集するというのもなんだか再現性がない。かといってコンパイルコマンドに追加するcやjavaの仕様もめんどくさい。pythonではヘッダーでappendすれば使えるというだけでも改善されていると言える上、環境変数で設定してもいいというのはいいものだと思う。
+
+python
+├── py_library_handmade
+│   └── matrix.py
+├── test.py
+　で、matrix.pyは上のコードのままで、test.pyで、
+from py_library_handmade.matrix import Matrix
+mat = Matrix(3, 4)
+mat.set_value(0, 0, 4.21)
+print(mat)
+　で、
+python test.py
+　としたら成功。以下、import文の実験。
+mat = py_library_handmade.matrix.Matrix(3, 4)
+　は成功で、
+mat = matrix.Matrix(3, 4)
+　は失敗。やはりimportの先はコードでの名前と一致している。
+import py_library_handmade
+mat = py_library_handmade.matrix.Matrix(3, 4)
+　で失敗。importの先はディレクトリだとうまくいかないのか。
+
+　実験から一般化する。
+sys.path.append('/mnt/d/data/app/myapp/tool_handmade/python/py_library_handmade')
+　で、pathにpy_library_handmadeというディレクトリが加わる。このディレクトリ内にある.pyファイルのことをモジュールと呼ぶ。
+
+　importは、
+from matrix import Matrix
+mat = Matrix(3, 4)
+　というように、
+from [モジュール名] import [method, class名]
+　とする書き方と、
+import matrix
+mat = matrix.Matrix(3, 4)
+　というように、
+import [モジュール名]
+　とする書き方がある。importの先がファイル名だったり関数名だったりとややこしく感じるかもしれないが、importの先はスクリプト内で使われる文字列と考えると理解しやすい。たとえば、違うファイルに同じ名前の違うmethodがあったとしよう。
+from a import method_A
+from b import method_A
+　というように、import先が同じ文字列であると、スクリプトでこの文字列を使ったときにどちらを使えばいいか不明なため、エラーになる。つまり、importの先の文字列に被りは許されない。
+　以下に比較をコピペ。
+import ファイル名: メリットとしては、モジュール全体がインポートされ、モジュール名を使ってどのモジュールの関数やクラスかが明確になるため、コードがわかりやすくなる。デメリットとしては、大きなモジュールをインポートすると、使用しない機能もすべてメモリにロードされるため、効率が悪くなる場合があります。
+from ファイル名 import 関数名, クラス名: メリットとしては、必要な関数やクラスだけをインポートするため、コードがシンプルで、必要なものだけを明確に使用できる。デメリットとしては、どのモジュールから関数やクラスがインポートされたのか、コードだけではわかりにくくなる可能性がある。
+
+　また、pathにあるpy_library_handmadeの中身にpyファイルだけでなく、ディレクトリがあった場合でも.区切りで使える。たとえば、
+py_library_handmade
+├── list
+│   └── list.py
+└── matrix.py
+　という構造の場合、
+import matrix
+import list.list
+mat = matrix.Matrix(3,4)
+list = list.list.List(3,4)
+　というようにする。
+
+　pythonのライブラリはすべてライブラリのディレクトリに.pyファイルとして存在している。pip installでライブラリをインストールできるが、これは.pyをダウンロードして、ライブラリのディレクトリに追加するもの。これもかなりわかりやすい。
+　ただ、numpyを見たときに、
+import numpy as np
+u = np.random.randint(0, 2, 50)
+　とあり、これはpathにlibというディレクトリのパスがあったとして、lib/numpy.pyとあって、numpyのrandomというクラスのrandint()関数をつかっていると思ったのだが、実際はnumpyというディレクトリになっていた。
+
+　ディレクトリに__init__.pyというファイルを入れると、pythonのパッケージとして認識されて、モジュールとして使えるようになるらしい。
+　これについて実験。
+import py_library_handmade
+mat = py_library_handmade.list.list.List(3, 4)
+　とするとエラー。まあ、import先がpyファイルではなくディレクトリなので当然。ただ、py_library_handmadeに、
+from .matrix import Matrix
+from .list.list import List
+　とだけ書いた、__init__.pyというファイルを作ると、
+import py_library_handmade
+mat = py_library_handmade.List(3, 4)
+　で機能した。つまり、ディレクトリに__init__.pyとすることで、ディレクトリをモジュールにすることができる。ディレクトリをモジュール、つまりpyファイルとして認識させているので、この書き方になるのだろう。
+　また、__init__.pyは、クラスの__init__と同じ名前だが、後者はコンストラクタで、前者はパッケージとして認識させるためのファイルで別物。
+　__init__.pyの中身の.matrixは__init__.pyのカレントディレクトリ、つまりモジュールとして認識させたいpy_library_handmadeというディレクトリ内のmatrix.pyから、Matrixというクラスをimportするという意味である。.list.listは./list/list.pyの意味。
+　ふつうは、module.pyがあったとして、
+import module
+　とすればmodule.py内のすべてのmethod, classにアクセスできる。しかし、ディレクトリでモジュールを作る場合は、__init__.pyでimportしたものだけにアクセスできる。これは、実際に実験で、上の__init__.pyから、
+from .list.list import List
+　を消したらエラーがでた。
+
+numpy.random.randint(0,2,50)
+　で、
+>>> numpy.random
+<module 'numpy.random' from '/home/lucifer/.local/lib/python3.10/site-packages/numpy/random/__init__.py'>
+　とでてきた。モジュール名.モジュール名はみたことがないので疑問に思ったが、どうやらディレクトリをモジュールのように扱う、つまりディレクトリのパッケージ化においてはこのようなこともできるらしい。つまり、pyファイルをモジュールにする場合は、ファイルの下にはmethodや変数、classしかないが、ディレクトリをモジュールにする場合はその限りではないということだ。
+　といっても意外と単純で、__init__.pyに、
+from . import matrix
+　とすれば、
+import py_library_handmade
+mat = py_library_handmade.matrix.Matrix(3,3)
+　とできるし、py_library_handmade/math/matrix.pyというようにして、py_library_handmade/math/__init__.pyには、
+from .matrix import Matrix
+　と書いて、py_library_handmade/__init__.pyには、
+from . import math
+　とすれば同様にできる。また、ほかにも、math/__init__.pyを作らず、py_library_handmade/__init__.pyに、
+from .math import matrix
+　としてもできる。
+　
+
+
+if __name__ == "__main__":
+　について。pythonでは
+a = 3
+print(a)
+　というように書いてもスクリプトとして使える。しかし、これをimportしてしまうと、
+>>> import test
+3
+　というように実行されてしまう。これを避けるために、python test.pyとしたときは実行されて、import testとしたときは実行されずクラスや関数だけimportされるようにしたい。その場合は、
+if __name__ == "__main__":
+    a = 3
+    print(a)
+　というようにする。importするためのmatrix.pyなどで使うべきだが、
+python matrix.py
+　とすることはないように思う。まあ、関数のテストなどには使えるかも。
+
+a = 3
+print(a)
+　を書いた、test.pyをカレントディレクトリにつくり、
+>>> import test
+3
+>>> a
+Traceback (most recent call last):
+  File "<stdin>", line 1, in <module>
+NameError: name 'a' is not defined
+>>> test.a
+3
+　つまり、pythonにif __main__と書いていないとimportで実行されてしまうわけだが、print()など標準出力はそのまま実行されるものの、そこで定義された変数はすべてモジュール変数としてimportされ、test.aというようにして扱わなければならない。
+
+>>> from test import a
+3
+>>> a
+3
+　とできた。つまり、importはclass, methodのほかに変数も可能だということだ。モジュール変数という概念を導入せずとも、importしたpyファイル、つまりモジュールのclassやmethodを使うには、matrix.Matrixとする必要があるように、変数を使う場合もtest.aとする必要があるというだけ。
+　といっても、importするpyファイルは基本classやmethodで構成されていて、テストできるように__main__を使うことがあるかもしれないくらいで、わざわざ__main__にせず直書きすることはなかなかないと思う。
+　あと、__main__は実行されないわけで、直書きは実行されて、そこで作られた変数はtest.aとしてimportしたコードで扱えるという意味で、グローバル変数といえるかもしれない。C言語では関数の外でも使えるものとしてグローバル変数があったが、pythonではファイルの外でも使えるものとしてグローバル変数というのだろう。いや、Cでのグローバル変数ような使い方もできるのかもしれない。まあ、Cでグローバル変数を使わなかった私が、わざわざpythonで使うことはないだろうが。
+　どうやら使えるらしい。
+global_var = 10
+def print_global_var():
+    print(global_var)  # グローバル変数にアクセス
+def modify_global_var():
+    global global_var
+    global_var = 20  # グローバル変数を書き換え
+print_global_var()  # 出力: 10
+modify_global_var()
+print_global_var()  # 出力: 20
+　という感じ。printのような変数の読み込みだけなら必要ないが、書き換えるときは
+global global_var
+　というようにglovalキーワードを使う必要があるらしい。なんだか変数の定義のようで、インスタンス変数やクラス変数さえ定義文を使わないpythonの基本理念に反している気がするので、使うことは絶対にないだろう。いや、ちがう。読み込みはただその変数を指定するだけなので問題ないが、書き込みは
+a = 3
+　のようにするわけで、これはpythonの代入で宣言も行うという設計ゆえ、新しいaという変数を宣言してしまう。つまり、global変数として宣言するためのキーワードなのだ。これをなくすには関数ないではモジュール変数と同じ名前の変数を宣言できないというようにするしかないが。globalキーワードを使う方を選んだのだろう。
+　いやあった。progress, randでつかった。最初の時間を取得しておくような使い方なら読み込みしかしないので、globalキーワードは必要ないが、randの使った乱数ファイルのサイズのようなものはインクリメントしていくので必要。
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+　python -m。pythonのモジュールについて。pipの実行方法を例にとると、
+$ python3 /Users/pegasus/build_software/brew/lib/python3.13/site-packages/pip
+$ python3 -m pip
+$ pip
+　の3つの方法がある。pythonをインストールすると、いくつかのバージョンのpythonがインストールされる。2番目の使い方であれば、
+$ python3.11 -m pip install numpy
+$ python3.13 -m pip install numpy
+　というように好きなバージョンのpipをつかうことができる。3番目は$PATHに好きなバージョンのpipを登録しておけば使える。デフォルトでは$PATHが通っていないので、手動で$PATHを通す必要がありめんどくさいので2番目でいいと思う。
+　ここで、-mはpythonのsys.pathにあるモジュールの中からpipを探して実行する。
+$ python3 -m pip --version
+　とすればpipのバージョンだけでなくパスまで標準出力してくれるので、1番目のように直接そのパスにあるpipをpythonで実行してもいい。というか、$ python /Users/.../pipとせずとも、$ /Users/.../pipでいいが。
+　だが、どちらにせよ、1番目のように手動でパスを指定するより、2番目や3番目のように自動でただしいpipを選択してくれる方法のほうが一般的とのこと。
+
+　また、pipのようなpythonモジュールは他にもvenv, http.serverなどがあるので以下にまとめる。python3 -m venv envは結局venvというプログラムがあるわけで、venv envというように実行するのと同じなので、以下はそれぞれのプログラムの解説ということになる。なので以下、python -mを省略して書く。
+
+
+
+
+
+
+
+
+　pip。. ./env/bin/activateで仮想環境モードにして、pip installで好きなライブラリを入れられる。
+$ sudo pip install cython
+　でシステムにインストール。
+$ pip install --user cython
+　でホームディレクトリにインストール。またvenvによる仮想環境がオンになっていれば、
+$ pip install cython
+　で仮想環境のディレクトリにインストール。
+
+　pip installの進捗表示がとても綺麗なデザインなので、progress.pyで参考にしている。しかし、
+$ pip install numpy > tmp.log
+　のようにファイルにリダイレクトすると、進捗表示なしになってしまう。
+$ pip install numpy | tee tmp.log
+$ pip install numpy | cat
+　でも同様に進捗表示がなくなるので、ファイルへのリダイレクトを感知して、出力するものを変えているようだ。これをgptに聞くと、
+if sys.stdout.isatty(): 
+    progress_bar(current, total) # ターミナル出力の場合のみ進捗バーを表示
+else:
+    print(f"{current}/{total}MB")  # ファイル向けにはシンプルな出力
+　というようにして、ターミナル出力を感知してそれで出力を分けることができるらしい。
+
+　ただ、これは使わなくていいと思う。プログラムが冗長になるうえ、べつにlog.txtに書いたように、最終的なターミナルの表示だけをtxtに保存する形で、logをtxtに変換するプログラムを作ればいらないはずだ。
+
+
+
+
+
+
+
+　
+
+　venv。仮想環境を作れる。envという引数を与えると、カレントディレクトリにenvというディレクトリを生成する。つまり、
+$ venv env
+　でカレントディレクトリにenvが生成される。そして、
+$ source ./env/bin/activate
+　または、sourceを.で略して、さらに./も略して、
+$ . env/bin/activate
+　で仮想環境モードになり、
+$ deactivate
+　と入力されると終了する。
+$ rm -r env
+　でリセットできる。
+
+　仮想環境の特徴としては、まず使われるライブラリが仮想環境内のものを優先するようになる。これはsys.pathの先頭に仮想環境のディレクトリのパスがくるということだろうか。そして、pip installをしたときに、仮想環境内にダウンロードされるようになる。これは便利かも。
+
+
+
+
+
+　http.server。
+$ http.server 8080
+　というように、ポート番号を引数に与えると、そのポート番号で簡易web serverを構築してくれる。
+　まずweb serverというのはただhtmlを表示するものであり、html表示ならローカル限定でfirefoxでもできる。ただfirefoxは他のコンピュータに公開するといったことはできないので、いままではnginxではいろいろ設定したうえでindex.htmlのあるディレクトリを指定して、index.htmlを表示できるようにしていた。
+　しかし、http.serverはindex.htmlがあるディレクトリでコマンドを実行するだけでこれができてしまうので意外と便利。
+　80はpermittionがだめなので、8080になっている。permissionがあればどの任意のポートでいいと思う。
+
+
+
+
+
+
+
+
+
+
+
+　pythonのバイナリ化について、
+pip install pyinstaller
+　でインストールして、
+pyinstaller --onefile convert_xlsx_to_csv.py
+　で、バイナリを作れる。カレントディレクトリにdistディレクトリなど、いくつかのディレクトリやファイルが生成されるのであまり好きではない。バイナリファイルはdistの中にある。
+　もちろんこれをmybinにいれればコマンド化できる。ただ、shebangであまり必要性は薄まった。
+
+
+
+
+
+
+
+
+　
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+　授業妄想。
+
+　pythonはcのような本質的な理解がなくても扱える言語ではありますが、python自体はcをずっと使っていた人たちがもっと便利なプログラミングができるようにと作った言語なわけで、pythonは本来cより難しいことをしています。
+　pythonからプログラミングを初めて、cで挫折して、そのままpythonのプログラマーになる人はたくさんいるわけですが、そのようなルートをたどりたいひとにはこの授業はおすすめしません。この授業は、c言語でプログラミングをこなしてきたひとが、pythonがどのようにしてつくられたのか本質的な部分まで理解するための授業です。ルートとしては、基礎的なc言語を学んだうえで、さらに高級なpythonを勉強してプログラマーの最先端を目指すというもの。
+　まあ、cが理解できていないものの、受けてみたいという人は受けてもらっていいです。一応c言語の教育材料はアップロードしてありますので、それで勉強するといいでしょう。ただ、これは4ターム分の内容なので、これを来週までにすべて理解するのはかなり難しいと思います。プログラミングの素質があるのにこの2年間一切触れてこず、この教材にふれてプログラミングにドはまりして1週間プログラミング漬けになった、とかであれば可能性はありますが。
+
+　とりあえず、授業を始めます。まず、pythonのインデントについて。c言語で字下げの位置をこだわってプログラミングしている人であれば、ある程度プログラミングしたあとに、だいたいこのようなコードに落ち着くはずです。
+
+コード
+
+　関数のものを字下げして、forやifで字下げ。単文なら{}なしで、複文なら{}で囲む。単文でも{}で囲う流派のひともいますが、gccコンパイラは必要とはしていません。
+　逆に、字下げはこれ以外のところでは不用意に使いません。そこで、pythonではこの字下げによって、関数やif, forの範囲を定義できるようにしました。
+
+　次に変数の型についてです。cでは主に、int, unsigned int, float, double, charがありました。
+　わかりやすいdoubleから説明します。doubleのしくみはアップロードしたc言語の教材を参照してください。ここでは省きますが、floatは4、doubleは8バイトで、doubleは精度が倍になっています。たとえば、
+
+値
+
+　という値あれば、doubleではこうなり、floatではこうなりますが、floatのほうは桁落ち？してしまっています。まあ、結局8バイトということは2^8^8パターンを表現でき、それぞれに値が対応しているわけで、バイト数がおおい変数型のほうが表現力が高いのは直感的にわかると思います。
+　さて、pythonの話にもどりますが、pythonでは実数の変数型に4byteはなく、すべて8byteです。ややこしいですが、8byteの実数型をfloatとしています。これはまさに高級言語といえるものです。
+
+図
+
+　次にstrについて。cではchar型配列として文字列を扱っていました。図を参照してください。UTF-8ならこのようなバイナリになるわけで、charは1byteの変数型なので、この配列になっているわけです。
+　cでは一文字ならchar型、2文字以上はchar型配列として扱いましたが、pythonでは一文字のcharでもすべて配列、つまり文字列として扱います。
+
+

@@ -1,0 +1,329 @@
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+　環境変数。普通に、$(HOME)で参照できるらしい。makeファイル内で設定したローカル変数と同様に使える。
+
+　:=と=のちがい。右辺に変数が指定されたときに、:=は定義時に展開されるのに対し、=はmake実行時に展開される。なので、
+VAR := $(OTHER_VAR)
+OTHER_VAR = Hello
+all:
+	echo "$(VAR)"
+ とするとVARの定義時にはOTHER_VARは空なので、標準出力も空になる。
+
+
+
+
+
+
+
+make -f GNUmakefile
+　でファイル名指定できる。こうしない場合は、
+GNUmakefile, makefile, Makefile
+　の順に検索する。
+
+　makeの本質として、
+a:b
+    c
+b:
+    c2
+　と名前を付けると、
+make a
+　とすればaをつくるためにbを探し、bが最新でなければc2を実行してbをつくり、cを実行してaをつくる。
+clean:
+    rm ...
+　とすればこの形式にあてはめればただrmコマンドのaliasとして使える。ただ、cleanというファイルが最新で存在しているとコマンドが使われないので
+.PHONY: clean
+　を加えておくといい。
+
+　あと、マクロだが、基本はcの#defineと同じで、ただコマンドラインから、
+make CFLAGS=-DTEST
+　というように指定できるのがポイント。また、内部マクロというものもあり、
+$@, ターゲット
+$<, 依存ファイルの先頭だけ
+$?, 依存ファイルのうちターゲットより新しいもの、つまりコマンドを実行するもの。
+$^, 依存ファイルすべて
+　という感じでいろいろ使えそう。
+
+　コマンドは基本的に標準出力されるが、
+*.o: *.c
+    @echo "target: $@ depends on: $^"
+　というように@をつけるとこの出力をしないようにできる。
+
+　ワイルドカード。カレントディレクトリにある.cファイルをすべてコンパイルするスクリプトの作成につかえる。
+all: $(wildcard *.o)
+%.o: %.c
+	@echo "$@ $<"
+　だとうまくいかない。まず、makefileがmyappにあって-f myapp/makefileとしようが、ファイルはカレントディレクトリのなかで探す。つまり、この場合のワイルドカードは、カレントディレクトリにあるすべての.o、を指し、実際は.cしかないのだからターゲットはなしになる。
+SRCS := $(wildcard *.c)
+TARGET := $(patsubst %.c,%.o,$(SRCS))
+all: $(TARGET)
+%.o: %.c
+	@echo "$@ $<"
+　これだとうまくいく。SRCSでカレントディレクトリ内のすべての.cのリストを作り、TARGETで.cを.oに置換したリストを作る。そしてそれをallでデフォルトターゲットにすれば、
+a.c b.c
+　があるカレントディレクトリでmakeとするだけで、
+a.o b.o
+　を求めてくれて、あとは%.oが受け止めて、%.c、つまり同じ名前の.cを使ってコマンドを実行する。これで、makeと打つだけでカレントディレクトリ内すべての.cをコンパイルするmakeの完成。もちろん、
+make a.o
+　とすればa.cをコンパイルしてくれる。
+
+
+
+
+
+　suffix。suffixとは、makefileで出てきた単語で、拡張子の意味。makeのことになるが、サフィックスルールは、
+.c:
+　で、今はあまり使われておらず、
+%.c:
+　というパターンルールが主流。おそらく、
+%.c: %.o
+　であれば、matpri.cが与えられた時に、
+matpri.c: matpri.o
+　となるのだろう。
+
+
+
+
+
+
+https://voyagegroup.github.io/make-advent-calendar-2020/006-default-target
+　デフォルトターゲットで自身をcatする。まあ、
+help:
+	@echo -n "\e[0;38;5;214m$$\e[0;37m " 
+	cat $(firstword $(MAKEFILE_LIST))
+　こうすればhelpでmakeの中身が見れて便利だし、これをデフォルトターゲットにすればプラクティスであるというだけ。$(firstword $(ARG))で$(ARG)の最初の要素を取り出せる。
+
+
+
+
+
+https://news.mynavi.jp/techplus/article/linux-328/
+　置換。latexで%.texを%.auxに置換したかったので。詳しくはlatex_makefileを見たほうがわかりやすい。
+SRC := src1.c src2.c src3.c header.h
+　とすると、
+test:
+    echo $(SRC:.c=.o)
+　とすればリストを置換できる。
+test: 
+    echo $(SRC:%.c=%.o)
+　でも一緒。ただ、%は便利で、
+test: 
+    echo $(SRC:%=/tmp/objs/%.o)
+　という使い方もできる。てか最後のほうに書いてあるが、上のわたしの師匠のmakeにでてきた、
+$(patsubst %.c,%.o,$(SRCS))
+　の簡易形らしい。
+
+
+
+
+
+
+　あとこれによって、ほしいmakeがひとつふえた。大きなアプリを作るときに、src/libにライブラリをすべてコピーして、lib内すべてとコンパイルするもの。ただし、ふつうのプログラミングにおいてはいちいちapp/myappにある自作の関数たちをコピーするのはめんどくさいので、どこのディレクトリでもmakeと打つだけでapp/myappの関数たちと一緒にコンパイルしてくれるものも必要。なおこの際に、.oをどうするか。a.cがあるところにaをつくるだけのほうがきれいな気もするが、その場合関数たちの.oをどこかに入れなければならない。app/myappにいれるよりは、b/mybinなどに入れたほうがいい気がする。これをさけるならば、a.cがあるディレクトリでmakeすると、mymath.o, mynetwork.o, a.o, aがでるようにするか。または.oをなくすか。ただこの場合毎回関数をコンパイルすることになるので無駄な気もする。といってもいままでとかわらないのでこれでもいいかも。
+
+
+
+
+
+echo -n
+　で改行なし。ただ、makeのechoはmake内臓のもので少し特殊なので注意。本来色をつけるには
+echo -en "\e[0;38;5;214m$\e[0;37m "
+　というように-eが必要だが、
+@echo -n "\e[0;38;5;214m$$\e[0;37m "
+　とeなしで成り立つうえ、eあるとエラー。
+
+　もしmakeのechoをつかいたくなければ/bin/echoというようにパスを指定すればいいらしい。ちなみにこのechoはオレンジの$をつけているだけ。ただ$とするとマクロになってしまうので$$とする。
+
+
+
+
+https://zenn.dev/hikarin/articles/c892d6bfb7b82543c7f9
+　前にmakefile -fとしても、makefileのある場所ではなく、実行したカレントディレクトリの場所が基準というのを知って、カレントディレクトリ内のcファイルすべて、を取得するのに特別なものは必要なかった。
+　だが、macにmakefileを引っ越したときに、c_library_handmadeの絶対パスが変わるのがめんどくさい。そこで、makefileはmyapp/makefilesにいれて、myapp/c_library_handmadeを相対パスで参照しようと思い見つけたのが上の記事。
+MAKEFILE_DIR := $(dir $(lastword $(MAKEFILE_LIST)))
+　とすればmakefileのディレクトリを得られるとのこと。
+https://qiita.com/koushisa/items/65629719815009313212
+　より、
+MAKEFILE_DIR:=$(dir $(abspath $(lastword $(MAKEFILE_LIST))))
+　がmakefileのディレクトリで、
+PARENT_DIR := $(shell dirname ${MAKEFILE_DIR})
+　がそのうえのディレクトリらしい。上の記事とすこしちがう。実験したところどっちでもいけた。
+$(dir )
+　がディレクトリを得ているのか、その絶対パスを得ているのかちゃんと理解したい。
+
+
+
+
+　
+
+
+
+
+
+
+
+
+
+　jmake。
+　javaはjavaコマンドでしか実行できず、さらにカレントディレクトリ以外のclassファイルを探してくれない。
+　後者は、
+java -classpath ~/mybin MyClass
+　とすることで、mybinのclassファイルを実行できる。
+　前者はスクリプトファイルを利用して、MyClassというshファイルに、
+java -classpath ~/mybin MyClass
+　と入れておくことで、どこでも
+MyClass
+　で実行できるようになる。
+
+　この知識をもとにjmakeを作成。ここで、makeの復習を一度しておこうと思う。上にも書いてあるがややこしいので。
+　まず、リストという考え方が重要で、文字列の配列と考えていい。これをコマンドに組み込むと
+a.c b.c
+　というように空白区切りで展開してくれる。また、ターゲットや素材も空白区切りなので、
+a : $(JFILE)
+　とすれば、$(JFILE)にあるファイル名に合致するものすべてを材料にしてくれるし、ターゲットにすれば、指定されたファイルがそれらの中にあればそれが実行されることになる。
+
+$(wildcard *.java)
+　はカレントディレクトリの正規表現*.javaに一致するファイル名の配列。
+make -f ~/d/..
+　というように遠い場所にあるmkファイルを実行しても、カレントディレクトリがもとになるので注意。
+$(patsubst %.java,%.class,$(JFILES))
+　patsubstは3つ目の引数の文字列配列から、%.javaを%.classに置換した文字列配列を返すもの。
+$(JFILES) = a.java b.c
+　なら、
+$(patsubst %.java,%.class,$(JFILES)) = a.class b.c
+　になる。
+
+firstwordやlastword, $(MAKEFILE_LIST)などと、文字列の配列を、echoとかを使って実験したほうがいいかも。
+
+　jmake補足。Main.classと、スクリプトファイルであるMainがどちらも~/mybinにあるとあれなので、classは~/mybin/javaに入れている。
+echo "java..." > ~/mybin/Main
+　でスクリプトファイルを作成しているが、permissionが644で実行権がないので、755にしている。
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+　以下参考にしたurl
+https://ie.u-ryukyu.ac.jp/~e085739/c.makefile.tuts.html
+　がとても詳しい。
+https://news.mynavi.jp/techplus/article/linux-331/
+　下のほうにmakeの基礎から応用まであるのでよさそう。
+https://nao-bamboo.hatenablog.com/entry/2015/09/11/175832
+　これめちゃいい。説明がわかりやすいのでサイトを見たほうがいいが、一応このサイトのmakeをコピペしておく。
+PROGNAME := tcpserv
+INCDIR := include
+SRCDIR := src
+LIBDIR := lib
+OUTDIR := build
+TARGET := $(OUTDIR)/$(PROGNAME)
+SRCS := $(wildcard $(SRCDIR)/*.c) $(wildcard $(SRCDIR)/$(LIBDIR)/*.c)
+OBJS := $(addprefix $(OUTDIR)/,$(patsubst %.c,%.o,$(SRCS)))
+#$(warning $(OBJS))
+CC = gcc
+CFLAGS = -Wall -O2 -I $(INCDIR)
+.PHONY: all clean
+all: $(TARGET)
+$(TARGET): $(OBJS)
+	$(CC) $(CFLAGS) -o $@ $^
+$(OUTDIR)/%.o:%.c
+	@if [ ! -e `dirname $@` ]; then mkdir -p `dirname $@`; fi
+	$(CC) $(CFLAGS) -o $@ -c $<
+clean:
+	rm -rf $(OUTDIR)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+　

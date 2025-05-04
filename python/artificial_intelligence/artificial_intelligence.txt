@@ -1,0 +1,80 @@
+
+　理想はchatGPTをコマンドで実行したい。そして音声での会話もできるようにしたい。
+
+　問題はchatGPTはクローズドソースで、ブラウザから使うしかない点にある。そこで、ディープラーニングのうち質問をstrで入力して、応答をstrで返す、自然言語モデルについてまとめる。
+
+　必須知識は以下の、
+自然言語処理（NLP）: モデルがテキストを理解・生成できるようにする技術。
+機械学習・深層学習: モデルのトレーニングや調整に関する知識。
+データ収集とクリーニング: モデルの学習に適した高品質なデータセットの準備が必要です。
+分散処理: 大規模モデルを学習させるためにGPUやクラウド環境を利用します。
+　が必要らしい。CourseraやUdemyで提供される「NLP」や「Deep Learning」コース、オンライン書籍「Deep Learning with Python（François Chollet著）」などで勉強しろとのこと。
+
+
+　Hugging FaceのTransformersライブラリが有名らしい。これにはいくつかの事前学習済みモデルが公開されていて、以下のようになっている。
+gpt2 (OpenAI): 小規模で軽量、教育目的やプロトタイプ開発に適しています。
+GPT-3 (OpenAI APIを通じて利用可能): 大規模で非常に強力なモデル。
+GPT-Neo / GPT-J / GPT-NeoX (EleutherAI): オープンソースで利用可能なGPT-3に類似したモデル。
+LLaMA (Meta): 研究用に公開されたモデルで、サイズや性能が選択可能。
+BLOOM (BigScience): マルチリンガルでオープンソースの大規模生成モデル。
+　とのこと。ようは、chatGPTの開発元であるopenAIはGPT-3以降を有料で提供しているが、gpt2はオープンソースで提供。そして、そのgpt2を用いて、EleutherAIがオープンソースでGPT-Neoなどのモデルを開発している。
+　うーん、いまいち包含関係がわかりづらい。
+
+　とりあえず、transformerでgpt2を使ってみる。
+
+　gpt2.pyがchatgptが示したコードで、これを実行するために、
+pip install torch torchvision torchaudio
+　をしたら4GBくらいのデータをダウンロードした。
+python gpt2.py "hello"
+　とすると、まあ支離滅裂なものが返ってくる。とりあえず今日はここまで。
+
+
+　
+
+
+
+
+
+
+
+
+　二度目の挑戦。LLaMAは旧FacebookであるMetaが開発したオーブンソースのモデル。ここに、elyzaという学習済みモデルをロードする。ここで学習済みモデルはニューロン間の結合重みのデータという理解であっているらしい。
+　まず、elyzaのダウンロードについてだが、
+$ brew install huggingface-cli
+　でhuggingface-cliをインストールして、
+$ huggingface-cli download elyza/ELYZA-japanese-Llama-2-7b --local-dir ~/inbox/elyza
+　で学習済みモデルをダウンロード。ここで、ログインしていないと途中でエラーがでるので、
+$ huggingface-cli login
+　でcredentialに書いたトークンを入力することで、上のコマンドで、エラーがでなくなるのでダウンロードできた。
+
+　これをpython3.10に
+$ pip install torch transformers accelerate
+　をインストールして、実行する。それぞれ、
+torch: PyTorch（モデルの実行に必要）
+transformers: Hugging Faceのモデル管理ライブラリ
+accelerate: 高速化＆最適化のため（GPUがあれば自動で使う）
+　というライブラリとのこと。elyza.pyでmodelをロードしてみたものの、メモリが16GBではswapが発生して遅くなるらしい。返答が帰ってこなくて、cpuは80%、gpuは30%、メモリは12GBの状態がずっと続いていたので、やめた。ゲーミングPCを買ってからにする。
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

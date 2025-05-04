@@ -1,0 +1,2304 @@
+　最新のcppは、
+~/d/study/academic_ability/university/lecture/lecture_till2023/プログラミング演習III/
+　にある。
+
+
+　file.hppをつろうとして、if mode == 'r'のためにstr.hppを作成。どちらもとてもきれい。そしてmatrix.hppでread、まあコンストラクタだが、とwriteを作った。とても綺麗。
+　xyz_ensembleをいきなりつくろう計画で複数戻り値。std::tupleでもうつくれる。
+　lorenz作ろう計画。matrix.hppもstr.operator*も、progress.cppも作った。network::randomもつくった。
+
+
+　listを作ろうとして、list(3, "r", )と可変長引数を受け取るところでなやんでたはず。listができれば、method(list(3,4))というように可変長引数はつくれるが。
+
+
+
+cpp成功うれしすぎる。失敗についてはcalc.hpp参照。only_x, xyz_ensemble, x012やる。
+あとslice(0,-1)を{0,-1}にできるようにslice(初期化リスト)というコンストラクタを作る。
+const str dir << r << "/" << l << ".bin" ;にできるかきく。
+
+
+
+　gnuplotやる。資料作りにも役立つし、stcdやwoutを視覚的に見るために有効。
+　gnuplotをcppでつかう。gnuplot << "plot,,のやつ。
+　grun.cppで、grun timeserise.gp ts.mat
+
+
+akl.fmat,ts.fmat
+model.esn, y.mat
+stcd.fmat, confusion_matrix.fmat
+　を出力。あと、f_value.fmatなどのgnuplot用のファイル。
+
+
+
+
+invがあまりにも遅い。C言語を復旧してこんなに遅かったか確認。
+eig自作。
+
+python復旧。ただ、cppでいいならcppがいいのであとででいい。二つの言語でつくるのめんどくさいし。numpyの勉強はあらかた終わったと思っていいと思う。
+
+
+
+
+
+
+
+
+
+
+a = np.ndarray((3,3))
+b = a[1, :]
+a = 1
+　としたときに、bはちゃんと機能している。ようはb.data = a.data+3になっているわけで、このずれがあるゆえ、部分行列は一時オブジェクト的な扱いにしか考えられないのだが、これだと部分行列が本体になっている。
+　まあ、たとえaで72byte確保して、bはそのうち24byteしか参照していないとしても、その72byteの参照カウンタは2になっているわけで、aが手放しても1になって残るというだけなのだろう。
+　ちなみに、cppでは部分行列はただの一時オブジェクトとして、それを変数に格納するときも、一時オブジェクトである部分行列のdataを読み取ってコピーするだけなので問題ない。
+　ただ、
+std::shared_ptr<std::vector<double>> data;
+　で、freeしなくても参照がなくなれば自動で解放してくれるものも存在する。これを使えば、本体と、一時的な部分行列という関係がなくなり、どれもひとつの行列として扱える。ようは、部分行列だけ残ったとして、free(b.data)とすると72byteの先頭ではないため上手くいかないのだ。しかし、これならpythonと同様ガベージコレクションが使えるので問題なく作用する。
+
+
+
+　networkでwsやbaなど実装したい。network::randomでは隣接行列だが、ほかは隣接リストや、辺リストなど考えられる。csrと隣接リストは似ているので、mat, adjency_list, edge_list, csrの4つのクラスを作り、互換性を持たせる。
+
+
+
+
+　0で初期化される問題。いや、おおきいmatrix確保したらひらほら不定値でてきた。いや、これstridesがばぐってただけだった。
+
+
+
+
+
+
+
+
+
+
+
+
+　cppとはいえ、C言語をそのままコンパイルできる仕組みであることが理解の鍵である。C言語ではまとめてコンパイルするわけで、すべて同じファイルに書いてもコンパイルできる設計である。イメージとしては、長いソースコードの中にひとつひとつ書いていく感じ。ゆえに、classやnamespacenなどのオブジェクト指向なものも、構造体や関数のようにただ長いソースコードの中に書くだけ。
+
+
+
+
+
+
+
+malloc(): corrupted top size
+/home/lucifer/d/software/handmade/bash/cpp_runner.sh: line 8: 17172 Aborted                 (core dumped) ./$binary_file ${@:2
+　というエラー。matrixでstrideが間違っていて、読み込みは不定値を読み込むだけなので問題ないが、fillだとmallocしていないメモリへ書き込もうとするので、そこでこのエラーがでた。
+
+
+terminate called after throwing an instance of 'char const*'
+/home/lucifer/d/software/handmade/bash/cpp_runner.sh: line 8: 17289 Aborted                 (core dumped) ./$binary_file ${@:2}
+　というエラー。これはchar const*型のエラーオブジェクトがthrowされたものの、catchされなかったというもの。
+throw "matrix::operator()(int, slice): i < 0 || shape[0] <= i" ;
+　をするとなる。ただ、これより、
+throw std::runtime_error("This is a runtime error");
+　というようにエラーオブジェクトを投げるべきだった。
+　しかし、どちらにしてもtry-catchなしだと表示されない。ふつうにprintとexitをまとめたerr_raise()でいいと思う。
+
+
+corrupted size vs. prev_size
+　メモリで問題が起きている。AddressSanitizerが有効。gdb.txt参照。
+
+
+
+
+
+
+
+
+
+
+
+
+　コンパイルについてまとめる。C言語と同様に、ライブラリは仮引数宣言をまとめた.hファイルと関数の定義をまとめた.cファイルによって構成される。イメージとしては、
+
+
+#include <stdio.h>
+int method(int, int) ;
+int main() {
+    // 実装
+    method(3, 4) ;
+    printf("hello!\n") ;
+}
+int method(int a, int b) {
+    // 実装
+    printf("hello\n") ;
+}
+　というmain.cというファイルがあったとして、methodを他のプログラムでも使えるようにしたいときに、
+int method(int, int) ;
+　という内容のmethod.hをつくり、
+#include <stdio.h> // methodでprintf()を
+#include "method.h"
+int method(int a, int b) {
+    // 実装
+    printf("hello\n") ;
+}
+　という内容のmethod.cをつくる。そして、main.cでは、
+#include <stdio.h>
+#include "method.h"
+int main() {
+    // 実装
+    method(3, 4) ;
+    printf("hello!\n") ;
+}
+　と書くだけでよくなる。
+
+
+　なお、main.cをコンパイルする際は、
+gcc -o main main.c
+　だけだったのが、method.hをindir, method.cをカレントディレクトリにおいて、
+gcc -o main -I indir main.c method.c
+　というようにしてコンパイルする必要がある。
+
+
+　なお、.hに直接関数を実装すれば、.hファイルだけでライブラリを構成できる。つまり、
+gcc -o main -I indir main.c
+　だけでよくなる。ようは、
+#include <stdio.h>
+int method(int a, int b) {}
+int main() {}
+　というようにかけるのだから、#include ".h"の挙動がただそこに展開されるだけであることと合わせれば、これは自然なことである。
+　ただし、この場合は関数が使われない場合でも.hファイルで実装された関数はすべてコンパイルされてしまうので実行バイナリのサイズは大きくなってしまい、メモリに読み込まれる機械語のコードが大きくなってしまう。といっても、自作ライブラリはそこまで大きくないので.hで実装していいと思う。
+
+　ここまではC言語で説明してきたが、cppでも同様である。.hが.hpp、.cが.cppになっただけ。
+
+　ここで、コンパイル時の-I indirは環境変数$CPLUS_INCLUDE_PATHで設定すれば省略することが可能である。なので、bashファイルでPATHのようにちゃんと.hファイルのディレクトリのパスを$CPLUS_INCLUDE_PATHに追加しておけば、-Iオプションはつかわなくていい。
+　ただ、makefileなどでは-Iでちゃんと明記しておいたほうがわかりやすい。
+
+
+
+　.a、.soファイルについて。ライブラリの.cppファイルをコンパイル時に指定すると毎回コンパイルが行われてしまう。そこで、ライブラリの.cppファイルを.aや.soファイルにしておいて、以下のように適切に指定すれば、毎回コンパイルする必要がなくなる。
+
+　.aファイルのような静的ファイルであればコンパイル時に実行バイナリに組み込まれるので、実行時にはとくに設定なしで使うことができる。その分実行バイナリが大きくなり、メモリに読み込まれる機械語のコードは大きくなりやすい。
+　一方.so, .dylibファイルのような動的ファイルであれば、実行バイナリには組み込まれない。そのためファイルサイズもメモリ消費も少ないが、実行時には環境変数LIBRARY_PATHで.so, .dylibファイルのあるディレクトリを設定しておく必要がある。
+
+　これらのファイルは、コンパイル時に、
+gcc -o main -I include -L lib main.c -llpack
+　というようにして指定する。-Lが.aファイルや.soファイルがあるディレクトリで、-llapackはlibにあるliblapack.aやliblapack.soを指定するオプションである。libを-lとして指定する。
+　つまり、libmethod.aというファイルをつくって、-lmethodとすれば、コンパイラーは-Lで指定されたディレクトリからlibmethod.aやlibmethod.soを見つけて一緒にコンパイルしてくれる。
+　また、-Iと同様に、-Lは$LIBRARY_PATHで省略できる。実行時に.soならLD_LIBRARY_PATH、.dylibならDYLD_LIBRARY_PATHに設定が必要とのこと。
+
+　以下自作ライブラリを例に、.aファイル作成までの手順を示す。bin.cpp、str.cppらをまとめてlibhandmade.aにして、main.cpp -lhandmadeにしたい。
+g++ -c .../library_cpp_handmade/file1.cpp -o .../build/file1.o
+g++ -c .../library_cpp_handmade/file2.cpp -o .../build/file2.o
+　といようにして、ビルド用ディレクトリにオブジェクトファイルである.oファイルを生成して、
+ar rcs .../dist/handmade/lib/libhandmade.a .../build/file1.o .../build/file2.o
+　でバイナリを生成するディレクトリに.aファイルが生成される。あとは、上の$LIBRARY_PATHの理解があればつかえるだろう。
+r: ファイルをアーカイブに追加または置換。
+c: 新しいライブラリを作成。
+s: インデックスを作成してアーカイブを最適化。
+　という意味らしい。
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+　ライブラリ。str.cpp。
+
+　strとsliceでslice(int,int), str.operator[](slice), slice(str)の順に実装していて、それぞれ依存している状態になってしまった。
+　これを解決するために、hppをhppとcppに分けるようにした。単純に、hppは、#include "str.hpp"をあえてせずに、class str ;としておいて、cppで
+#include "str.hpp"
+#include "slice.hpp"
+　として、関数の中身を実装することで解決できるようだ。
+
+　コンストラクタも
+str(int a): a(3)
+{
+    // 実装
+}
+　というのを、hppでは、
+str(int a) ;
+　として、cppでは、
+str::str(int a): a(3)
+{
+    // 実装
+}
+　と書くことでわけることができる。関数は特に書かずともわかるだろう。ポイントはstr::strというようにする必要がある点である。classもnamespaceに似ていて、namespaceでは定義も呼び出しもstr::を付ける必要はないが、namespaseの外で呼び出すときはstr::をつける必要がある。cppに分けるときのようにnamespaseの外で定義する場合もstr::を付ける必要があると思えば理解は難しくない。
+　他にも気を付けるポイントがいくつかある。デフォルト引数はhppで設定して、cppでは書かない。テンプレートはhppで実装する必要がある。
+　あと、strとsliceの両方で、bin.hppを使っていて、bin.hppではちゃんとifndef _bin_hppでインクルードガードをしていたものの、二重呼び出しのエラーが出た。gptにきいて、binもhppとcppに分けることで解決したが、本質的な理解には至っていない。前にコンパイル単位とかでインクルードガードでは意味がないみたいなのがあったと思うがそれに関係していると思われる。
+
+　引数のデフォルト値はhppで定義して、cppでは定義しない。
+default argument given for parameter 3 of 'static matrix matrix::random(int, int, const file&, double, double)'
+　というようなエラーがでる。このエラー文少しわかりづらいと思う。
+
+　staticはhppで定義して、cppでは定義しない。
+matrix.cpp:9:97: error: cannot declare member function 'static matrix matrix::random(int, int, const file&, double, double)' to have static linkage [-fpermissive]
+　というエラーがでる。
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+　std::malloc。malloc()と同じらしい。malloc()でいいと思う。また、cppではmallocは非推奨で、
+new double[30] ;
+delete double[30] ;
+　とつかえとgptに言われた。ただ、mallocの単純さがすきなのでいいと思う。
+double *data = new double[30] ;
+*(data + 132543240) = 3 ;
+　とすると、segmentation faultになるのは変わらないし。
+
+　あと、C言語では、
+double *data = malloc(sizeof(double) * 8) ;
+　としても、void *をdouble *に入れてますと忠告されるだけだが、cppではコンパイルエラーになる。
+
+
+
+　getpid()。C言語でも使える。
+#include <unistd.h> // getpid()
+で、getpid()とすればpid_t型で返してくれる。typedef int pid_t ;とヘッダーで定義されているので、str(int)が定義されているstrのコンストラクタで、str(getpid())でいけた。
+
+
+
+
+
+
+　std::vector<>。配列。cppでもC言語の配列が使えるので、というか普段はmallocで確保して配列としてつかっているので出番はなかったが、gnuplot-iostreamがstd::vector<>を引数にとるのでまとめる。
+#include <vector>
+std::vector<int> vec ;
+std::vector<int> vec2 = {1, 3, 2, 7, 2} ;
+std::vector<int> vec3(10) ; // サイズ10
+std::vector<int> vec4(10, 42) ; // サイズ10で42で初期化。
+　というように使う。{1, 3..}は初期化リストコンストラクタvector(std::initializer_list<int>)であり、(10, 42)はただのvector(int, int)のコンストラクタであることに注意。
+　イテラブルであり、vec.begin()で先頭、vec.end()で末尾+1のint *型ポインタを返す。
+
+　また、operator[]のオーバーロードにより、
+vec[0] = 3 ;
+　というようにアクセスできる。int &を返すようにしているのだろう。
+std::vector<int> vec4 = {1, 3, 4, 7} ;
+std::cout << vec4[-1] << "\n" ;
+　を実行すると0になった。-1で末尾を指してくれないらしい。末尾を指したいときは、
+std::cout << *(vec4.end() - 1) << "\n" ;
+　でいけた。
+
+std::cout << vec ;
+　とするとエラーがでる。operator<<はオーバーロードされていないらしい。表示したいなら、
+for(int i : vec2) // iter対応
+    std::cout << i << " " ;
+　というように、forループでひとつひとつ表示するしかない。
+
+
+　インスタンス関数は以下の通り。
+std::vector<int> vec = {1, 2, 3};
+vec.push_back(4); // {1, 2, 3, 4}
+　appendはなく、これがappend。
+vec.pop_back();   // {1, 2, 3}
+
+vec.insert(vec.begin() + 1, 99); // {1, 99, 2, 3}
+　99の部分はinitializer_listにも対応していて、
+vec.insert(vec.end(), {4, 5, 6}) ;
+　で、1, 99, 2, 3が、1,99,2,3,4,5,6になる。第一引数のポインタは挿入されるポインタであり、begin() + 1とかすでに要素がある場合は、挿入後にもともとあった要素は後ろに移動する。
+　Tとinitilizer_list<T>には対応しているが、std::vector<T>には対応していないので注意。str.split()のように、std::vector<str>とstd::vector<str>を連結したいときにinsertは使えない。str.split()では連結したいstd::vectorの要素数が2で確定だったので、insert(result.end(), {tmp[0], tmp[1]})というようにひとつひとつ指定してinitializer_listにしてわたした。
+　もし自作するならこれで連結できるようにしたい。
+
+vec.erase(vec.begin() + 1);      // {1, 2, 3}
+
+std::cout << vec[0] << std::endl; // 1
+std::cout << vec.at(1) << std::endl; // at()は範囲外のアクセスで例外スローで安全
+　これいい。matrix.hppでアクセスごとに範囲外かどうかを確認するのはmul()などの関数では冗長で、でもデバッグもしたくて悩んでいたが、()は確認なしで、at()は確認ありにすれば解決する。cではデバッグありなしがあるのでここらへんを考える必要がある。
+
+std::cout << vec.size() << std::endl ;
+　3と出力される。push_back()で追加していくとちゃんと1ずつ増える。内部で確保しているメモリ量ではないのか、それともメモリをpush_back()のたびにreallocしているのか。
+std::cout << vec.capacity() << std::endl ; 
+　でベクターの容量を取得できるらしいので、こっちがメモリ量なのだろう。
+vec.resize(5) ;
+　でサイズを5に変更（0で埋められる）。これはただ0を指定の数までpush_back()しているだけなのだろう。
+
+std::vector<int> vec ;
+vec.reserve(10) ;
+　で10個の要素を確保したvecを生成できる。最初から追加していくより、効率がいい。ただ、これならべつに、コンストラクタで、std::vector<T>(int)でint分確保できるので使わないかも。
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+　std::tuple<>。
+std::tuple<int, int> a(3,4) ;
+std::cout << std::get<0>(a) << "\n" ;
+　のように使う。operator[]は定義されておらず、要素にアクセスするにはstd::get<0>()という静的関数を使う必要がある。冗談に聞こえるかもしれないが、本当である。ただ、pythonとはちがって
+std::get<0>(a) = 1 ;
+　で書き換えができる。
+
+　std::pair<>。
+std::pair<int, int> b(3,4) ;
+b.first = 1 ;
+std::cout << b.first << ", " << b.second << "\n" ;
+　のようにつかう。tupleの要素が2つ限定されたもの。ただ、tupleよりfirst, secondでアクセスできるので可読性が高い。
+
+　というか、書き換えができるのであればtupleは必要ない。可変かどうかのちがいはあり、11個なら20個分確保するといった無駄があるかもしれないが、高級志向ではlist, vectorでいい。
+
+
+
+
+
+　std::unordered_set。pythonのsetで、ハッシュテーブルによる順序のないデータ型。ハッシュテーブルについてはpython.txt参照。
+#include <unordered_set>
+std::unordered_set<int> mySet = {1, 2, 3, 4, 5};
+mySet.insert(6); // 1, 2, 3, 4, 5, 6
+　というように使う。検索は
+if(mySet.find(3) != mySet.end()) {
+    std::cout << "Found 3\n";
+}
+　という感じで、find(3)はset<int>ならintを引数に、見つかればその要素のイテレーター、見つからなければend()を返す。イテレーターの部分を参照してほしいが、イテレーターは厳密には*i,++i,!=をオーバーライドしたクラスであることが条件だが、一般的にはset<int>なら* int型のようなポインタになっている。つまり、findは見つかればその要素のポインタを返すので直感的に理解は容易い。見つからないときにNULLではなく、end()を返すのは、これもイテレーターを参照してほしいが、forではi != end()を満たさないときにループを抜けるので、end()がNULL扱いなのだろう。
+mySet.erase(2);
+mySet.erase(mySet.find(2))
+　で消せる。set<int>ならintと* intに対応しているという意味。network.hppで{{1,2},{3,2}}というようなstd::unordered_set<std::unordered_set<int>>を作ろうと思ったのだが、std::unordered_set<int>のハッシュ値が定義されていないゆえにエラーがでてしまう。std::unordered_set<int>を受け取ってsize_tを返すような関数オブジェクトをつくって、 std::unordered_set<std::unordered_set<int>, HashSetHash, HashSetEqual> network;というようにするとできるらしい。
+　ここで関数オブジェクトとは
+struct HashSetHash {
+    size_t operator()(const std::unordered_set<int>& s) const {
+        size_t hash = 0;
+        for (int num : s) {
+            hash ^= std::hash<int>()(num) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
+        }
+        return hash;
+    }
+};
+　のようにstructでoperator()を定義して、HashSetHash(network)というように関数のように使えるstructのことを指すようだ。structでも関数を定義できるとなると、classと同じではないかと思ったのだが、どうやらclassとほぼ同じ使い方ができるらしい。ちがいはclassはデフォルトがprivateだが、structはデフォルトがpublicであるとか、そんな感じだった。ただ、やはりstructは関数を持たないただのデータの集まりとしてつかうのが一般的であまり使われるのは少ないとのこと。
+
+
+　
+
+
+
+　std::unordered_map。pythonのdict。ハッシュテーブルを用いている。dictはハッシュテーブルだったっけ。std::mapはハッシュテーブルではないのでもしかしたらそっちかも。どちらにせよ、キーと値の集合であるのは同じ。python.txtにも書いたが、キーはstrでなくてもいいことに注意。
+
+　std::set, std::mapは赤黒木というデータ構造を使っているらしい。ハッシュテーブルではないsetはvectorと同じではとも思うが、役割は同じでも、データ構造が違うのだろう。
+
+　赤黒木。
+　以下のようなルールらしい。ノードに赤と黒の属性をつけて、新しく追加するノードは赤とする。赤は黒のノードの下にしか追加できない。ようは枝の長さのバランスを保つためのデータ構造なのだろう。黒ノードはどう追加するのかはまた勉強する。
+
+
+
+
+　std::max_element。
+std::vector<int> vec = {1, 3, 5} ;
+int max_value = *std::max_element(vec.begin(), vec.end())
+　で最大値を取得できる。int *型ポインタが連続しているメモリ領域を、先頭と末尾+1のポインタを渡すことで関数に渡すと、そのうち最大値であるintのポインタを返す。
+std::vector<int> vec2 = {0,3,6,1} ;
+std::cout << *std::max_element(vec2.begin(), vec2.end()) ;
+std::vector<double> vec3 = {0.0, 1.0, 1.5, -3.4} ;
+std::cout << *std::max_element(vec3.begin(), vec3.end()) ;
+　でint, doubleどちらもできたので、max_element(int *, int *)とmax_element(double *, double *)をオーバーロードしているのだろう。
+　また、
+#include <algorithm> // std::max_element
+　が必要だとgptがいっていたが、#include <vector>だけでいけた。
+
+　pythonでは任意のオブジェクトにoperator<が定義されているので、任意のオブジェクトの配列であるlistを使って、list.max()とかで取り出せた。これと比較すると少しつかいずらくはあるが、list.hppで書いたようにポインタの配列というのが動的確保をもとにしたオブジェクト指向のもので、cppでは関数のスタック領域に静的確保していくので、これはむずかしいのだろう。
+　まあ、イテラブルが、まあmatrixではポインタではないが、基本的にbegin()で先頭ポインタ、end()で末尾ポインタ+1を返すようになっていて、これが、私がよく使っていた先頭と要素数と同様にメモリ領域を指定するためのものであるというのがわかりやすくはあるが。
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+　namespace。
+　std::vectorは、stdという名前空間にあるvectorクラスという意味。名前空間は、
+namespace matrix {
+    void add() {
+        // matrixのadd実装
+    }
+}
+namespace math {
+    void add() {
+        // mathのadd実装
+    }
+}
+　というように定義できる。
+
+　namespaceの中にある関数、およびクラスを使う場合は、math::add(), matrix::add()と書かなければならない。逆に、
+void add()
+　と普通にC言語の関数定義をした場合は、add()だけで使えるが、名前が衝突すると即エラーをはく。
+
+　これはかなり便利で、C言語ではabs()という関数名をつけられなかったし、いまはculc_abs()というようにすべての関数にプレフィックスをつけている。cppではこれを防ぐためにnamespaceを作ったのだろう。
+　実際、culcをcppで作るなら、最初に全体をcalcというnamespceで囲えば、いちいち関数にcalc_と付ける必要もない。
+
+　pythonでは、matrix.pyにMatrixクラスを書くことで、import matrixとすれば、matrix.MatrixとしてMatrixクラスが使える。cppではpythonでいうファイル分けをnamespaceで囲うことで実現しているのだろう。これは長いソースコードにすべて書くというC言語の設計にしたがっている。
+
+　namaspaceの最後や、中の関数に;は必要ない。classは必要。ただclassも中の関数は;は必要ない。
+　method_aでmethod_bを使っている場合、namespaceの中ではmethod_b, method_aの順で定義する必要があるが、classの中では順序関係なく定義できる。ただし、class_aでclass_bを使っている場合は、class_b, class_aの順に定義する必要がある。また、クラスの中でクラスを使う場合も、たとえばIteratorなら、class Iteratorを定義してから、Iterator begin()を定義する必要がある。
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+　std::cout。C言語では一番最初に、
+#include <stdio.h>
+int main() {
+    printf("hello\n") ;
+    return 0 ;
+}
+　というコードを習った。今は、
+#include <stdio.h>
+int main() {
+    fprintf(stdout, "hello\n") ;
+    return 0 ;
+}
+　をよく使っている。cppではもちろんこれらも使えるが、これに加えて、
+#include <iostream>
+int main() {
+    std::cout << "hello" ;
+    return 0 ;
+}
+　というのが使える。これはただ、fprintf(std::cout, "hello")をこのような形で書いているだけ。といってもstd::coutはfprintfには使えないが。
+　問題はこれは、
+int a = 3 ;
+std::cout << a ;
+　としても使える点にある。これはpythonでは__str__()をオーバーロードすることでprint()に渡したときにどのようなstrに変換するか定義できた。cppでも自作クラスで
+class matrix {
+    friend std::ostream& operator<<(std::ostream& os, const Matrix& matrix) {
+        for (unsigned int i = 0; i < matrix.rows; ++i) {
+            for (unsigned int j = 0; j < matrix.cols; ++j) {
+                os << matrix.data[i * matrix.cols + j] << " ";
+            }
+            os << std::endl;
+        }
+        return os;
+    }
+}
+　というようにしてoperator<<をオーバーロードすることで、
+matrix mat(3,3) ;
+std::cout << mat
+　と書いたときに、std::coutに渡される文字列を定義することができる。これは、静的関数をフレンド関数にしてアクセス権を与えたうえで、フレンド関数に限ってclass内で実装できるのを使っている。詳しくはfriend修飾子を参照。
+　上のintをそのままstd::coutに<<できるのも、標準でintにこのようなオーバーロードがされているからだろう。
+　また、よく、
+std::cout << method() << std::endl ;
+　というのを見るが、これはただ、
+std::cout << method() ;
+std::cout << std::endl ;
+　を省略しているだけ。
+
+　pythonでは
+{percentage:.1f}
+　でfloat64を31.1のように小数点以下を1桁にして表示できる。これをcppでやると、
+double percentage = 30.22334 ;
+std::cout << std::fixed << std::setprecision(1) << percentage ;
+　となる。これは
+std::cout << std::fixed ; // 1e-7のような指数表記を31.3のような固定小数点形式に。
+std::cout << std::setprecision(1) ; // 小数点以下の桁数
+std::cout << percentage ;
+　と等価である。お察しのとおり、percentageに適応されるのではなく、std::coutに適応されるので、このあとも変更しない限りdoubleの表示方法はこの設定が永続する。
+#include <iomanip> // std::setprecision()
+　が必要なので注意。戻し方は、
+std::cout << std::defaultfloat ;
+
+
+　pythonでいうhex()について。15というintから"F"という文字列を作る方法。標準出力するだけであれば、intを16進数で標準出力するモードにするstd::hexと、すべて大文字モードにするstd:uppercaseをつかって、
+std::cout << std::hex << std::uppercase << 15 ; 
+　とすれば"F"と出力される。そして、std::coutのようなstd::stringstreamはべつに作れるので、
+std::stringstream ss ;
+ss << std::hex << std::uppercase << 15 ;
+std::cout << ss.str() << "\n" ;
+　というようにすれば、ss.str()という文字列で受け取れる。
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+　std::format。pythonでいう、
+f"a:{a}, b:{b}"
+　と同じように、
+std::format("a:{}, b:{}", a, b)
+　とかける。生成するのはstd::stringなので注意。まあ、std::string.c_str()でchar*型に変換できるので問題ない。
+　c++20からしか使えない。macbookでは使えた。wslでは使えなかった。
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+　参照型について。
+void fill(int *a) {
+    *a = 3 ;
+}
+fill(&value)
+　とすれば、関数でポインタが指すメモリのバイナリを書き換えられるのがポインタの基礎なわけだが、cppではこれを、
+void fill(int &a) {
+    a = 3 ;
+}
+fill(value)
+　と書くことができる。内部処理は同じで書き方が簡単になるというだけ。つまり、fill()にvalueを与えているように見えるが、実際に関数のスタック領域の引数の部分のバイナリはポインタ型の8byteになっている。
+　これの便利なところは、関数呼び出しで書き換えを行うときにいちいち&valueというように&をつけなくてよい点である。また、関数内でも*aではなく、aとできるところもいい点である。
+　だが結局それだけ。
+
+　これは関数の引数として参照型を与えるもので、つまり、呼び出し元から関数へのポインタ渡しなのだが、これの逆である、関数から呼び出し元へのポインタ返しももちろんできる。mat_initでは、
+matrix *mat_init() {
+    matrix *result = malloc()
+    return result
+}
+matrix *mat = mta_init()
+　というようにしていたが、これを
+matrix &mat_init() {
+    matrix *result = malloc()
+    return *result
+}
+matrix &mat = mat_init()
+　とするというだけ。まぁ、cppではコンストラクタがあるのでinit関数は使わないのでいい具体例ではないかもしれない。
+　ただ、これはそこまで効果的ではない。というのも、コーディングするときに関数を作るのは最初の1回だけで、あとはmain関数から好きなように使えるわけで、それゆえに参照型があることで、ポインタを渡す場合もバイナリを渡す場合も気にせず、
+fill(value)
+　とできるのが参照型の一番のメリットである。だが、関数から参照型を戻す場合は、
+matrix &a = mat_init()
+　とする必要がある。
+
+　というか、main関数で参照型のようなポインタを格納する変数を使うことはあまりなく、たとえばポインタ3つをもつstridesのmatrixであれば、matrix a(2,3)というようにして、24byteを静的確保するほうが使いやすい。
+
+　あと、よく引数にconst matrix &というのをつかっている。constで書き換えができないのなら、ポインタを渡す必要がないと一見思ってしまうが、こっちの場合は関数のスタック領域の引数にはポインタ型の8byteだけをコピーすればいいだけであり、値渡しよりも高速である。
+
+　これと同様に関数の戻り値を参照型にすれば高速にできるのでは、と思ったが、これは誤りである。関数内で静的確保したものは関数終了時に解放されるため、呼び出し元にポインタ型8byteが与えられてもそのポインタが指すメモリは解放済みで空ということが起こってしまう。
+　参照型、あるいはポインタ型を返すというのは、関数の引数で与えられたポインタによって呼び出し元のメモリを書き換えるなどしてそのポインタを返す場合か、ヒープ領域に新しくメモリを確保してそのポインタを返す場合以外にないことに注意したい。
+　ただヒープ領域に確保したものはデストラクタが使えないのでほとんどは前者になる。とくにインスタンス関数はget(mat, 3)をmat.get(3)とかけるものであり、matの一部を参照型で返すことで書き換えができるという点で、getでは参照型の戻り値がよく使われる。
+
+
+　この記法上、ポインタを用いた関数では、*a = 3で書き換え、a = bとすればポインタを手放してちがうポインタを入れられるのに対し、後者はa = 3で書き換えなのでポインタを手放すことはできない。
+　といってもわざわざ引数で受け取ったポインタを手放すことはすることはないのでいいと思う。単方向リストの要素数を返す関数で、headをカウンタとして使ったくらい。
+
+　int *aで、aがポインタになるのに、*aがポインタにならないのはしっくりこないわけだが、&aでさらにややこしい。まあ、これは言語的なものなのでなっとくするかしないかでしかない。まあ定義が直感的でないというだけなのだが。
+　int *aかint* aか、またcpp限定だが、int &aか、int& aか。cppもC言語同様空白無視なのでこれは好みの問題だが、なにより決定的なのは、
+int* a, b, c
+int& a, b, c
+　としたときに、b, cはただのint型になることである。なので、
+int* a, *b, *c
+int& a, &b, &c
+　とする必要があるのだが、それなら、
+int *a, *b, *c
+int &a, &b, &c
+　でいいと思う。
+
+
+
+
+
+
+
+
+
+
+
+
+
+　関数を引数に。pythonではこれができて便利だなと思っていたが、cppでも、というかC言語でもできるらしい。といっても簡単で、
+matrix &fill(double (*method)(double)
+{
+    // 実装
+}
+　とかくと、
+double calc_tanh(double) ;
+　という関数があれば、
+mat.fill(calc_tanh) ;
+　というように使える。C言語でも使えるというのは意外。まあ変数とか構造体はデータとしてあるが、関数は関数で、それを引数にあたえるというのは内部的にどうなっているのか不明だが。
+
+
+
+
+
+
+
+
+
+
+　template。cppから使える。
+
+　bin::mallocではmallocが失敗したときもエラーを佩かずにnullを返すだけで、そのままそのメモリにアクセスしようとするとsegmantation faultになるので、
+void *bin_malloc(size_t size) {
+    void *result ;
+    if((result = malloc(size)) == NULL)
+        err_raise("bin_malloc(): (result = malloc(size)) == NULL\n") ;
+    return result ;
+}
+　というコードを書いたのだが、できれば、
+double *a = (double *)bin_malloc(sizeof(double) * 30) ;
+　というのを、
+double *a = bin_malloc_double(30) ;
+　と書きたい。そのために、
+double *bin_malloc_double(size_t) ;
+int *bin_malloc_int(size_t) ;
+　とすべて書くのはめんどくさい。
+
+　そこで、
+template <typename T>
+T *malloc(size_t size) {
+    T *result ;
+    if((result = (T *)malloc(sizeof(T) * size)) == NULL)
+        err_raise("bin_malloc(): (result = malloc(size)) == NULL\n") ;
+    return result ;
+}
+　と書くだけで、
+double *a = bin_malloc<double>(30) ;
+　というように、任意の型でつかうことができる。
+
+
+
+
+
+
+
+
+
+
+　try-catch。
+void method()=
+    {throw std::runtime_error("throw") ;}
+int main()
+{
+    try{method() ;}
+    catch(const std::runtime_error& e)
+        {std::cout << "Error: " << e.what() << "\n" ;}
+}
+　とすると、
+Error: throw
+　とだけ標準出力される。tryを使わないと、
+terminate called after throwing an instance of 'std::runtime_error'
+  what():  throw
+　と出力される。
+throw "no" ;
+　というように、std::exceptionでないオブジェクトをthrowすると、
+terminate called after throwing an instance of 'char const*'
+　と出力され、中身までは表示してくれない。const charなら表示してくれてもとは思うが。
+
+　catchの中は関数の引数のように定義する。throw 33 ;というようにintを投げたなら、catch(int e)とすればcatchできる。
+
+　std::exception下にある標準のstd::runtime_errorのようなエラーオブジェクトはstd::stringsのインスタンス変数をもっており、コンストラクタでそれを受け取って、what()というインスタンス関数でそれを返す。
+　というか、std::exceptionというクラスを継承していて、そのクラスにはwhat()が定義されているので、それを継承しているクラスすべてはwhat()を呼び出して表示してくれるというほうが正しいかも。ただ、cppにおける継承はまだ理解してないので適当。あとで理解する。
+
+　catch(...)とすると、intも含め、すべての型の例外をcatchする。ただ、これだとwhat()で内容を表示できないので、catch(const std::exception& e)とすれば、std::exceptionを継承している標準のエラーオブジェクトたちはすべてcatchできる。
+
+　以下、標準のエラーオブジェクト一覧。pythonとも対応させている。ただ、pythonではintを想定しているのにdoubleがきたときなどにTypeErrorをraiseしていたが、cppでは型定義があるのでこのようなことはない。
+std::exception, BaseException, 全ての例外の基底クラス
+std::logic_error, Exception, ロジックに起因する例外
+std::invalid_argument, ValueError, 無効な引数
+std::domain_error, ValueError, 許容されない数学的な引数
+std::length_error, ValueError, 不適切な長さ
+std::out_of_range, IndexError/KeyError, 範囲外アクセス
+std::runtime_error, RuntimeError, 実行時の一般的なエラー
+std::overflow_error, OverflowError, 演算のオーバーフロー
+std::underflow_error, Pythonには対応なし, 演算のアンダーフロー
+std::range_error, ArithmeticError, 範囲外演算
+std::bad_alloc, MemoryError, メモリ割り当て失敗
+std::bad_array_new_length, なし, 不適切な配列長
+std::bad_cast, TypeError, 型キャストエラー
+std::bad_typeid, TypeError, 型情報取得エラー
+std::ios_base::failure, IOError/OSError, 入出力操作のエラー
+std::bad_function_call, RuntimeError, 空の関数呼び出し
+std::bad_weak_ptr, なし, 無効な弱参照
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+　関数で複数の戻り値。gptに聞いたところ、いくつか教えてくれたのでまとめる。
+
+　1。std::pairをつかう。
+std::pair<int, std::string> get_pair() {
+    return {1, "example"} ;
+}
+auto res = get_pair() ;
+std::cout << res.first << res.second << ... ;
+　としてつかう。mainだけみたときに、first, secondがなにを指すかわかりづらいので却下。
+
+　2。構造体やクラスをつかう。
+struct result {
+    int id ;
+    std::strings name ;
+} ;
+result get_result() {
+    return {3, "item"} ;
+}
+result res = get_result() ;
+std::cout << res.id << res.name << ... ;
+　という感じ。いちいち構造体を定義するのがめんどくさいので却下。
+
+　3。参照型やポインタを引数として渡す。
+void get_result(int &a, std::strings &b) {
+    a = 3 ;
+    b = "item" ;
+}
+int id ;
+std::strings:name ;
+get_result(id, name) ;
+std::cout << id << name << ... ;
+　という感じ。引数を戻り値の数だけ増やすのと、idやnameを定義するのがめんどくさいので却下。
+
+　4。std::vector, std::arrayをつかう。
+std::vector<int> get_result() {
+    return {1, 2, 3} ;
+}
+std::vector<int> res = get_result() ;
+for (int v : vec) {
+    std::cout << v ;
+}
+　同じ型しか返せないので却下。
+
+　5。std::tupleをつかう。
+std::tuple<int, std::string> get_result() {
+    return std::make_tuple(3, "item") ;
+}
+auto [id, name] = get_result() ;
+std::cout << id << name << ... ;
+　採用。これです。
+
+
+　ここで、いくつか知らないものがでてきたのでまとめる。
+
+　型の部分をautoにすることで、自動で型を指定してくれる。関数の戻り値に型定義があるのでそれにしたがうのだろう。tupleのような型がわからないならまだしも、std::pairはstd::pairなので、std::pair resでいいと思う。
+
+　vectorのfor文。あとで。
+
+　pythonをもとに考えると、複数の戻り値を返す方法としては次のようなコードがいい。
+<int, std::string> method() {
+    return (3, "adi") ;
+}
+id, name = method() ;
+std::cout << id << name ;
+　というもの。ただcppでは型指定の必要があるが、autoを使って省略できる。そして、id, name =というようにアンパックの構文もない。なので、std::tupleのauto [id, name] = がもっとも最適解に思える。
+　このauto [id, name] = というのは構造化束縛と呼ばれるもので、自作クラスでも定義することができる。ただ、いちいち、一つ目はこれで、二つ目はこれでと定義する必要があるので使わないと思う。
+class Person {
+public:
+    int id;
+    std::string name;
+    Person(int id, const std::string& name) : id(id), name(name) {}
+};
+namespace std {
+    template<>
+    struct tuple_size<Person> : std::integral_constant<size_t, 2> {};
+    template<>
+    struct tuple_element<0, Person> { using type = int; };
+    template<>
+    struct tuple_element<1, Person> { using type = std::string; };
+}
+int& get<0>(Person& p) { return p.id; }
+std::string& get<1>(Person& p) { return p.name; }
+
+
+　また、pythonではdataframeのようにdictを返すこともある。
+dict method() {
+    return dict("id", 3, "name", "item") ;
+}
+dict parameta = method() ;
+std::cout << parameta("id") << parameta("item") ;
+　という感じだろうか。dictというクラスを作るだけで、とくに不思議な構文を使わずとも使えそう。というかpythonでdictがあそこまで使われているのは、dictがあまりにも便利だからだ。構造体を模擬することも可能なわけだし。
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+　オーバーロードという言葉がややこしいのでまとめる。pythonでは演算子の再定義を指し、javaでは同じ名前の関数を引数の数や型がことなれば複数定義できるというものである。
+　そしてcppはなんと、このどちらもできてしまう。なので、pythonでは、javaではという理解ではなく、演算子や関数の再定義をオーバーロードと表現する、としたほうがわかりやすいと思う。まあ演算子はオーバーライドともいえるが、関数はオーバーライドではまったくないのだが。
+
+　あと、cppではpythonのキーワード引数も使えるようだ。これはオーバーロードの省略という意味合いになっていて、
+method(int a)
+method(int a, int b)
+method(int a, int b, int c)
+　と書けば、method(3)も、method(3,4)も対応できるが、これを、
+method(int a, int b = 0, int c = 0)
+　と書けば、一行でmethod(3), method(3,4), methodj(3,4,5)に対応できる。ただ、競合する可能性があるので注意。どういうときに競合するかあとで理解しよう。
+
+　ただし、キーワード引数とはいえ、
+method(3, c=4)
+　というpythonのような引数渡しはできない。ただオーバーロードを簡略化できるだけ。cだけデフォルトでない値を与えたいときも、順番通りに、
+method(3, 0, 4)
+　と与える必要がある。
+
+
+
+　ここで、method(3, c=4)のように与える方法についてまとめる。
+
+　structによるラッピング。関数の引数を構造体で定義する。{.speed=100}の部分はc++20で導入されたデザインド初期化(designati initializers)と呼ばれるもの。あとでまとめる。任意のクラスに使えるがゆえにただわかりづらいだけのクラスのリテラル表記に似ている。
+struct MethodArgs {
+    int speed = 0;
+    int time = 0;
+};
+void method(const MethodArgs& args) {
+    std::cout << "Speed: " << args.speed << ", Time: " << args.time << std::endl;
+}
+int main() {
+    method({.speed = 100, .time = 50});  // キーワード引数のように見える
+    method({.speed = 200});             // time はデフォルト値を使用
+    return 0;
+}
+
+　関数のオーバーロード。ただ、
+method(const matrix &akl, double h_value=0.06, double c=0.3, unsigned int time=60000)
+　に対して、
+method(const matrix &akl, unsigned int time=60000)
+　とオーバーロードすることで、
+method(mat, 600)
+　とできるというものだが、関数のオーバーロードが冗長なのと、method(mat, time=600)とできずむしろわかりづらいので却下。
+
+　ビルダーパターン。pythonのpltのようなもの。クラスを作り、
+class MethodBuilder {
+private:
+    int speed = 0;
+    int time = 0;
+public:
+    MethodBuilder& setSpeed(int s) {
+        speed = s;
+        return *this;
+    }
+    MethodBuilder& setTime(int t) {
+        time = t;
+        return *this;
+    }
+    void build() {
+        std::cout << "Speed: " << speed << ", Time: " << time << std::endl;
+    }
+};
+int main() {
+    MethodBuilder builder;
+    builder.setSpeed(100).setTime(200).build(); // チェイン呼び出し
+    builder.setSpeed(150).build();             // time はデフォルト値
+    return 0;
+}
+　というようにする。関数ひとつのためにクラスを作るのはめんどくさい。まあ呼び出しは理想は、
+method(akl, time=600) ;
+　で、これを
+ethod.set_time(600).build(akl) ;
+　とできているので、まあ 再現はできてはいるが。structのほうが引数を構造体にまとめるだけなので簡単だと思う。
+
+
+　デザインド初期化(designati initializers)に関連して、method({.speed = 3})とはできないものの、method({3, 4})とするための方法として、引数の型をstd::initializer_list<int>にするというものがある。デザインド初期化(designati initializers)は引数専用のstructを引数にしているというだけ。
+　コンストラクタの引数にこれを使うと、
+slice(std::initializer_list<int> args)
+{
+    const int *it = args.begin() ;
+    start = (it != args.end()) ? *(it++) : 0 ;
+    end = (it != args.end()) ? *(it++) : -1 ;
+    step = (it != args.end()) ? *(it++) : 1 ;
+}
+　というようにつかえば、slice a({1,2})というようにしてsliceを作れる。まあ、sliceはoperator()()の引数で使うことが多いわけで、引数にsliceがあれば、mat({3,4}, 4)というように、std::initializer_list<int>を与えると、slice(std::initializer_list<int>)による暗黙の型変換が行われるので、mat(slice(3, 4), 4)と同じ挙動になる。
+　引数専用のstructをつかった、デザインド初期化(designati initializers)では、構造体を定義するというのが冗長ではあるもののキーワード引数に与えれる点、順不同である点、異なる型を与えられる点で優秀。std::initializer_list<int>ではint限定で、順番も決まっている。しかし、前者はかならず変数名をかかなければならない点で、後者も使い時はある。slice()のように。
+　
+　すこし、上のstd::initializer_list<int>のコードについて掘り下げる。
+std::initializer_list<int> a = {3, 5, 2} ;
+std::cout << *(a.begin()) << ", " << *(a.end()) << "\n" ;
+　を実行すると、3, 699881728と出力される。3は最初の要素であり、699...は不定値である。ここで、内部的には3, 5, 2のそれぞれのconst int *型ポインタの配列でできていて、begin()で最初の要素のポインタ、end()で最後の要素の次のポインタを返す。
+　これをもとに上のコードを見ると理解できるはずだ。
+
+　あと、デフォルトで、{1, 2, 4}とすると、コンパイラはこれをstd::initializer_list<int>として認識する。なので、これはリテラル表記といっていい。pythonではlistの[]、tupleの()などいろいろあるが、cppではstd::initializer_listの{}しかない。といっても、
+int arr[] = {1, 2, 3}
+　とかはわざわざstd::initializer_listを経由しているわけではないと思う。さらに、initializer_listはイテラブルであるので
+for(int i : {1, 2, 4, 10})
+　という表記が可能である。
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+　iter。iterator。イテレーター。イテラブル。
+
+　ここでイテラブルについてもまとめる。上のコードがイテラブルの定義そのものであり、
+for(matrix i : mat)
+    i = 3 ;
+　とするときに内部的には、
+for(matrix::Iterator it = mat.begin() ; it != mat.end() ; ++it) {
+    matrix i = *it ;
+    i = 3 ;
+}
+　が行われる。std::initializer_listはbegin()が返すのがint *型であったが、これは++と*と!=をサポートしているものならなんでもいい。なので、++, *, !=を定義したmatrix::Iteratorというクラスを定義して、matrix.begin()とmatrix.end()でそれを生成して返すようにすれば上のようなことができる。matrix::Iterator参照。
+　ここで重要なのが、呼ばれるのは++itであって、it++でない点である。++itはoperator++()で定義できて、it++はoperator++(int)で定義できる。後者のintはダミー引数で両者を区別するためのもの。まあ、使わないと思うのでこれ以上はいいと思う。
+　あと、for分では++itが呼ばれるだけなので、Iteratorのoperator++()の戻り値をvoidにしても問題なくforループは機能する。ただ、慣習として、(*this)を返すというのがあるので一応return(*this)としたほうがいいらしい。だが、やはりIteratorをfor以外で使うことはないので、matrix.hppではvoidにしている。
+
+
+
+　
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+　class。
+
+　クラスは、
+class Matrix {
+public:
+    unsigned int rows, cols;
+    double* data;
+
+    Matrix(unsigned int r, unsigned int c) : rows(r), cols(c) {
+        data = new double[rows * cols];
+        for (unsigned int i = 0; i < rows * cols; ++i) {
+            data[i] = i;  // 初期化
+        }
+    }
+} ;
+　というようにして定義する。構造体のように定義するだけ。
+　また、コンストラクタはpythonと同様、classの名前と同じ名前の関数で定義する。pythonでは戻り値の型指定を関数名の前に書かないので意識しなかったが、cppではC言語と同様、戻り値の型を書く必要がある。しかし、コンストラクタに限り、戻り値はインスタンスであるため、書かない。まあ、メンバリストもあるので、コンストラクタの定義は関数定義とは異なると考えたほうがいいかもしれない。
+
+　C言語では、
+Matrix mat ;
+　とすれば構造体をメモリに静的に確保して、
+mat.row = 3 ;
+　というようにして書き換える。あるいは、
+Matrix *mat = malloc...
+　というようにして動的に確保する。基本的には後者。これはcppの本質参照。
+
+　pythonでもreturn文は必要ないが、cppではreturn文がないことで、オブジェクトのバイナリを返すのか、オブジェクトのポインタを返すのか定まらない。
+　しかし、どうやら呼び出し方でどちらも指定できるらしい。バイナリを返す、つまり静的確保であれば、
+matrix mat(3,4) ;
+　とする。ポインタを返す、つまり動的確保であれば、
+matrix *mat = new matrix(3, 4) ;
+　とする。newが必要なので注意。これはjavaと同じ。
+
+　そしてここからが本題なのだが、javaではnewが必要なゆえに、
+(new matrix(3, 4) * new matrix(4, 3)).display()
+　としなければならないとかなんかがあったはずだ。これはjavaが動的確保にはnewが必ず必要であるという設計に基づいている。そして、cppではnewを省略することができて、こうすると一時オブジェクトを生成できる。一時オブジェクトは、
+matrix(3, 4).display() ;
+　とできる。matrix(3,4)が関数の引数であることはたくさん書いているのでいいだろう。これで一時的にmatrix(3,4)を確保してdisplayを実行、そしてデストラクタにより解放される。あとでtestしよう。
+
+matrix mat = matrix(3, 4) ;
+　ともできる。これはムーブ初期化のところ参照。
+
+
+
+class matrix {
+    unsigned int rows ;
+    unsigned int cols ;
+    double *data ;
+} ;
+　というようにしたところ、
+handmade.cpp: In function ‘int main()’:
+handmade.cpp:15:7: error: ‘unsigned int matrix::rows’ is private within this context
+   15 |     a.rows = 3 ;
+      |       ^~~~
+handmade.cpp:7:18: note: declared private here
+    7 |     unsigned int rows ;
+      |                  ^~~~
+　というエラーがでた。どうやら、
+class matrix {
+public:
+    unsigned int rows ;
+    unsigned int cols ;
+    double *data ;
+} ;
+　というように、publicをつける必要があるようだ。修飾子については後で聞こう。おそらく、一部private, 一部publicというようにできるはず。
+
+　あと、構造体だけをclassにいれているが、問題なく動作した。コンストラクタを定義しない場合は、構造体と同様にただメモリ確保だけを行うようだ。デフォルトコンストラクタというらしいが。
+
+
+
+
+
+
+
+
+
+
+　class A内でclass Bを定義することができる。このとき、Bをネストされたクラスと呼ぶ。class内でclassを定義ときくと、構造体の中で構造体を定義しているみたいで意味不明だが、これはただclass Aがnamespaceのように働くというだけである。実際、Bのインスタンスを生成したときにはBのインスタンス変数しかメモリ上には確保されない。
+　csr形式の行列を作る際に、matrixとはデータ構造がちがうため違うclassとして定義しようと思ったのだが、csrはmatrixの変種なので、matrix, csrとするより、matrix, matrix::csrというようにしたかった。しかし、matrixという名前はclass名で使われていて、namespace matrixとすると競合してしまう。そこで、この方法を知った。
+
+
+
+
+
+
+
+
+
+
+
+　メンバリストについて。javaやpythonではコンストラクタは所詮インスタンスを返す関数であり、(3,3)であればそれぞれ関数の引数として受け取ってコンストラクタ内でインスタンス変数にコピーする。
+　cppのメンバリストでは、上のMatrixを例にすれば、3と3をインスタンス変数であるrow, colに直接受け取ってから、data[row * col]を初期化する。
+　これがいまのところしっくりくる理解である。javaのほうに内部処理について書いているがいまはまだ深い理解に至ってないので、内部処理についてはまた理解しよう。
+　constや参照型はメンバリストでしか初期化できず、コンストラクタ内では書き換えできないなどあるがこれはまた理解しよう。
+
+　progressのコンストラクタではメンバリストでstrを初期化しているが、この時呼び出されるのはコピー初期化である。定義していないとsharow copyが行われて、関数終了時に引数のstr.stringsがデストラクタで解放されてメンバ引数のstr.stringsも解放されてしまうので注意。なので、
+progress(str input) : label(input) {}
+　としたときには、
+str label = input
+　と同様の処理が行われるという理解でいいのかな。呼び出し元では、progress("a")としているので、関数の引数部分では、
+str input = "a"
+　というようになっていて、const char *相手のコンストラクタが呼ばれている。ようは、
+progress a("a")
+progress a = "a"
+　は同じなのだろう。
+a = "a"
+　はoperator=なので注意。
+
+　esnの改装でなんとなく見えてきた。インスタンス変数で、
+matrix w_in ;
+　としたとしよう。メンバリストでは、
+matrix w_in = ...
+　というように初期化できるのに対し、関数内ではこれはできず、
+w_in = ...
+　という書き換えという形でしか値を設定できない。メンバリストで初期化しなかった時点で、
+matrix w_in ;
+　というコンストラクタで初期化が終わった後になってしまっている。
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+　インスタンスmethodはメンバ関数というらしい。でもめんどくさいのでインスタンスmethodと呼ぶことにする。いや、メンバ関数はクラス関数を意味する静的メンバ関数も含むので、インスタンス関数、静的メンバ関数と呼ぶのがいいらしい。
+
+　インスタンス関数で自分を参照する場合、pythonではselfだったが、cppでは(*this)とするらしい。thisがそのインスタンスのポインタになっているとのこと。参照型でもいい気はする。どうせインスタンス関数では(*this)が多様されるわけで、わざわざthis = というようにインスタンスのポインタを手放すことはないと思うので。
+　ただ、引数や関数内での変数に、インスタンス変数と同じ名前の変数を定義しなければ、(*this).step、あるいは、this->stepを、stepと省略できる。
+
+　静的メンバ関数は、
+private:
+    static int count;  // 静的メンバ変数（全インスタンスで共有）
+
+public:
+    Counter() {
+        ++count;
+    }
+
+    // 静的メンバ関数（クラス関数）
+    static int getCount() {
+        return count;
+    }
+}
+　というように定義するらしい。変数にも関数にもstatic修飾子をつけるだけでいいらしい。呼び出すときは、matrix.method()ではなく、matrix::method()であることに注意。classもnamespaceと同じということだろう。a.add()はインスタンス関数であり、インスタンス変数、つまり構造体の変数にアクセスするからa.add()というように.区切りなのだ。
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+　getitemについて。cppでは、mat(2, 2)とmat[2]どちらもオーバーロードすることが可能だが、[]については引数が一つまでなので、mat[2][2]のように使う必要がある。
+　pythonでも同様に()と[]のどちらもオーバーロードできるが、()は__call__()で、関数呼び出しであり、書き換えができない。そのため、[]である__setitem__()をオーバーロードしていて、cppとはちがい[2, 2]とtupleを受け取ることができたので問題なかった。
+　cppでは関数呼び出しではあるものの、たとえば、ポインタを返せば、*(mat(2, 2)) = 3 ;で書き換えができる。これはポインタが使えないpythonとの違いだろう。
+　いちいち*をつけるのがめんどくさいようであれば、関数の戻り値を参照型にすれば*を省略できる。詳しくは参照型のところを参照してほしい。この場合は、matrix.opepato()(self, 2, 2)となっていて、返す参照型はselfにあるdataという8byteのポインタが指すメモリ領域を、指しているため問題ない。
+
+　もちろん、pythonでもndarrayのように__getitem__で行列の一部を返すようにすれば、
+i = mat[2:3, 1]
+i[1, 0] = 3
+　で書き換えができたりはするのだが。
+
+　pythonの__setitem__()での書き換えは、
+mat[2,3] = 2
+　としたときに、mat.__setitem__((2, 3), 2)が呼び出される。なので、=の右辺を引数として受け取って処理すればいいだけである。
+　ただ、cppは参照型への代入なので、doubleやintであれば8byte, 4byteの書き換えであるが、matrixクラスのような複雑な構造体である場合、具体的にはnumpyのように、
+mat(slice(), 3) = mat_b
+　とした場合に、シャローコピーするのか、ディープコピーするのか分からない。
+
+　というかこれは参照型だからややこしくみえるが、所詮参照型の内部処理はポインタなので、
+*mat_a = *mat_b
+　と同じである。参照型は所詮はこれをmat_a = mat_bとかけるというものでしかない。mat_aが指す*data,*shape,*stridesの24byteに、mat_bが指す24byteの同様の24byteのバイナリをコピーするのは、C言語を理解していればわかるはず。そして、dataのポインタ8byteがそのままコピーされるのでmat_a->dataが察すdouble配列を書き換えるとmat_bも書き変わってしまう。
+　つまりシャローコピーになっている。
+
+　numpyの挙動を真似したいのであれば、
+mat_a(slice(), 3) = mat_b
+　としたときに、mat_a.dataのうち一部分だけを参照している行列を返して、mat_b.dataをmat_a.dataにコピーしたい。逆にそれ以外のstridesやshape、dataのポインタ型24byteや、stridesやshapeが指すメモリの中身はコピーしてはならない。よって、単純なシャローコピーではなく細かくカスタムする必要がある。
+
+　これを実現するには、まずC言語であれば
+mat_copydata(matrix mat_b, matrix mat_a)
+　で実装できる。cppのクラスを使えば片方を関数名の左に出せるので、コピーされる側のmat_aを左側に出すとすれば、mat_aのインスタンス関数として実装すればいいので、
+mat_a.copydata(mat_b)
+　とすればいい。そして、極めつけにcppでは演算子=をオーバーロードすることもできるので、pythonと同じ形である
+mat_a = mat_b
+　とすることができる。
+
+　ちなみに、今回はmat_aの24byteのバイナリ自体は書き換えないため、関数にmat_aのポインタを与える必要はないが、もし1層目の静的確保のバイナリを書き換えるのであればポイントを渡す必要がある。
+　といっても、参照型があるので、参照型で関数の引数を定義すればわざわざ
+&mat_a = mat_b
+　つまり、
+mat_copydata(matrix mat_b, matrix *mat_a) {
+    *mat_a.sum = ...
+}
+mat_copydata(mat_b, &mat_a)
+　とする必要はない。
+mat_copydata(matrix mat_b, matrix &mat_a) {
+    mat_a.sum = ...
+}
+mat_copydata(mat_b, mat_a)
+　でいい。
+
+　というか、1層目の静的確保層を書き換えないmatrixの=でも、24byteのコピーを8byteのコピーに抑えられるので、引数をmatrix &型にしている。const matrix &型にすると、たぶん、ポインタが指すdouble配列まで書き換えられなくなるので注意。参照型のところ参照。
+
+　ここで問題が戻り値である。mat_aをconst matrix &型で返すようにすれば、
+c = a = b
+　これは、
+c = (a = b)
+　なので、連鎖的に＝が使えるようになる。この場合はc.operator()では読み込みしか行わないので問題なく動く。
+
+(a = b).fill(1)
+　というように書き換えもできるようにするには、matrix &型でmat_aを返すようにすればいい。c.operator()の引数はconst matrix &だが、べつにmatrix &をconst matrix &で受け取っても問題ないので。
+
+　今はとりあえず、const matrix &にする。
+a(slice(2), 3) = b
+　としたときにbのdataをaのgetが返す同じdataのポインタをもつ縮小行列のdataにコピーする。a(slice(2), 3)のバイナリをそのまま参照しているので、書き換えはしないようにしている。
+a = b = c
+　でaにb=cが渡されたときは読み取ってコピーするだけなので問題なくて、
+a = b
+a.fill(1)
+　としたいときに、
+(a = b).fill(1)
+　とするのはできなくなっている。
+
+
+
+
+
+
+
+
+
+
+
+　コピー初期化。a = bはoperator=のオーバーロードで制御できるが、matrix a = bというような初期化時にどこをコピーするか制御することを考える。これは、
+matrix tmp(3,3) ;
+tmp = mat(slice(0,3), slice()) ;
+　としようとしたが、なんとか1行で書きたくて考えに至った。どうやら、
+matrix(const matrix& other) : matrix(other.shape[0], other.shape[1])
+{
+    (*this) = other ;
+}
+　というように、const matrix&が入力されたときのコンストラクタをオーバーロードすると制御できるらしい。これは
+matrix tmp(mat) ;
+　としたときの挙動になる。どうやらそのように書いてもいいようで、これをオーバーロードすることにより、
+matrix tmp(mat) ;
+matrix tmp = mat ;
+　としたときの挙動を決めることができる。
+
+　また、関数の引数で、method(matrix a)としたときに、method(mat)で呼び出すと、
+matrix a = mat
+　が実行されるので、コピー初期化が適応される。
+　コピー初期化によるコンストラクタを作らないとsharow copyが行われる、つまり、strであれば、関数にそのままstrを渡すと、関数のスタック領域にchar *とunsigned intの12byteがコピーされることになる。この場合、関数終了時にデストラクタが呼ばれて、char *の指す中身がfreeされてしまい、挙動がおかしくなる。
+　コピー初期化の設定の有無に関わらず、参照型のほうがはやいので、クラスはすべて参照型で引数に渡すようにしたほうがいい。
+
+　ただ、気になるのは、str(const char *)をつくっておくと、
+str a = "a"
+str a("a")
+　や、関数で、method(str)をmethod("a")というようにして呼び出せるわけだが、このとき、method(const str &)という形にしてしまうとどうなってしまうのか。
+　どうやら問題なく動くらしい。暗黙的な型変換が発生して、"a"をstr("a")でstrに変換し一時オブジェクトを生成、そしてそのポインタをconst str &に渡すというのを、自動でしてくれるらしい。
+　まあ、参照型にするのは高速化のためであるわけで、この場合はconst strでもconst str &でも変わらないわけだが。ただ、method("b")ではなく、method(a)というふうにstrを渡したときはコピーは行わずポインタだけ関数のスタック領域にコピーするので高速になる。
+
+　まとめると、method(const str &)という形にしておけば、コピー初期化コンストラクタ未設定時の解放問題は解決して、strを渡すときに高速になる。一方、str(const char *)というcharに対するコピー初期化コンストラクタを設定しているときに、method(const str)であればmethod("a")とできるものの、method(const str &)だと一見問題が置きそうである。しかし、暗黙的な型変換により自動でconst strと同じような挙動にしてくれる。
+
+
+
+
+
+
+　一時オブジェクトの書き換えについて。
+file &rand_file=file("a.bin")
+　とすると、
+/home/lucifer/d/software/handmade/cpp/library_cpp_handmade/random.hpp:15:43: error: cannot bind non-const lvalue reference of type ‘file&’ to an rvalue of type ‘file’
+   15 |     unsigned long int uli(file &rand_file=file((str(rand_dir) + str("/") + str("1.bin")).strings))
+　というエラーがでてしまう。一時オブジェクトをconstでない参照型に代入することはできないらしい。一時オブジェクトは書き換え不可能。しかし例外もあり、
+matrix mat = matrix(9,5,0.0).fill(1) ;
+　はできる。一時オブジェクトをconst以外の参照型に代入して書き換えることはできないが、一時オブジェクトをインスタンス関数で書き換えることはできるようだ。
+
+
+
+
+　ムーブ初期化。
+matrix h_vec(akl.shape[0], 1, 1.0);
+h_vec.randomize_nonzero(rand_file, -1 * h_value, h_value) ;
+　と書くのがめんどくさくて、できれば、
+matrix h_vec = matrix(akl.shape[0], 1, 1.0).randomize_nonzero(rand_file, -1 * h_value, h_value) ;
+　と書きたい。これはコピー初期化の形なので、コピーが起きてしまう。h_vecならまだしも、時系列だと60*60000とかになるわけで、静的確保してコピーして、一時オブジェクトを解放するのは少し効率が悪いように思う。できれば、
+matrix a = b(slice(), 0) ;
+　のときはコピー初期化、
+matrix a = matrix(3,3).fill(1)..
+　のときはムーブ初期化にしたい。ちなみに、一時オブジェクトのことを右辺値、それ以外を左辺値というらしい。なので、上は右辺が左辺値になっていて、下は右辺が右辺値になっているらしい。右辺左辺が、そのときの位置ではなく、ただ左辺はリテラル表記のような一時的なオブジェクトがおかれて、右辺の変数に代入されるのが基本的な代入式なのでそれにならって命名しているだけだろう。
+
+　そこで、
+matrix(matrix &&other) noexcept : matrix(other.shape[0], other.shape[1], "no_data")
+{
+    data = other.data ;
+    other.flag = 1 ;
+    std::cout << "matrix(move):" << (void *)this << std::endl ;
+}
+　というようにしたらムーブ初期化を使えた。&&やnoexceptはあとで理解する。問題は、右辺の一時オブジェクトのdataのポインタをそのままmatrix aのdataに入れたとして、一時オブジェクトはデストラクタが呼び出されてしまい、dataが解放されてしまう点にある。そこで、私はnumpyの(slice(), 3) = 用に作った、data解放しないでflagを実装済みだったので、otherのflagを書き換えることでdataの解放を防いだ。
+　よく使われる手法は、
+other.data = nullptr ;
+　とすることらしい。まあこっちでもいいかも。
+
+　しかし、
+matrix mat = matrix(3, 3) ;
+　とすると、ムーブ初期化ではなく、RVO(Return Value Optimization)が呼ばれる。
+matrix mat = matrix(9,5,0.0).randomize_nonzero() ;
+　とすると、ムーブ初期化でなく、コピー初期化が使われてしまう。
+matrix mat = std::move(matrix(9,5,0.0).randomize_nonzero()) ;
+　とすると、ムーブ初期化が使われるのだが。
+
+
+　あと、numpyの真似で、
+a(slice(2), 3) = b
+　のために、(slice(), slice())で同じデータを参照して切り出した行列をmatrixでreturnしているのだが、これは一時オブジェクトである。なので、
+matrix mat = a(slice(), slice(1,3))
+　としたときに、ムーブ初期化が行われると、切り出したdataをコピーして、一時オブジェクトが自動で解放されるときにdataを解放しないようにしているが、元の行列と同じdataなわけで、挙動がおかしくなる気がする。いや、ムーブ初期化を無効にしたいのであれば、一時オブジェクトをconst matrixにすればいいだけかも。もっぱらこれは
+other.data = nullptr ;
+　のように書き換えを不可能にするものだが。
+
+
+
+
+
+
+
+　コピー初期化、ムーブ初期化。これらは一見特殊なコンストラクタに見えるがただ
+matrix(const matrix &)
+　という型のコンストラクタというだけで、このような引数がひとつの数のコンストラクタは、
+matrix mat_a(mat_b) ;
+　という書き方のほかに、
+matrix mat_a = mat_b ;
+　という書き方も可能である。str.hppでは、str(char *)というコンストラクタを定義しているので、
+str a = "a.txt"
+　という初期化も可能。
+
+　そして、名前つき変数のような左辺値を引数に受け取るコンストラクタは
+matrix(const matrix &)
+　と書くのはいいとして、一時オブジェクトなどの右辺値は、
+matrix(matrix &&)
+　というように、&&で指定できる。そして、前者はコピー、後者はムーブにすることがよくあり、これらをコピー初期化、ムーブ初期化とよぶ。というか、未定義だと前者はシャローコピー、後者はデフォルトのムーブ処理が行われるんだったはず。
+
+　これらは関数の引数でも呼び出される。ようは、
+method(matrix input)
+　という形の関数に、mat_aを与えると、関数はまず、
+matrix input = mat_a
+　というようにして、関数のスタック領域に引数を組み立てる。matrix(const matrix &)やmatrix(matrix &&)が定義されていれば、左辺値つまりmat_aという名前付き変数を与えたときは前者、右辺値つまりmatrix::rondom(3,3)のような一時オブジェクトを与えたときは後者を呼んでくれる。
+
+　constのところに書いたが、インスタンス関数で、
+void method(const matrix &input) const {}
+　というように、()と{}の間にconstをいれると、インスタンス関数の本来の型である、
+void method(const matrix &this, const matrix &input)
+　のうち、thisの型を指定できる。デフォルトではmatrix &になっているので、constをつければ、const matrix &になる。そして、一時オブジェクトの型である&&を
+void method(const matrix &input) && {}
+　というように指定すれば、
+void method(matrix &&this, const matrix &input)
+　になるので、matrix::rondom(3,3).method()というように呼び出したときに、優先してそれを呼んでくれるようになる。
+
+　使いどころとしては、
+result = matrix::rondom(3,3)
+　のようにすると、matrix::random()が返すのはmatrix型であるため、一時オブジェクトが生成されて、operator=(matrix &&)を呼んでくれるものの、
+result = matrix::rondom(3,3).fill(3)
+　とすると、fill()はmatrix &thisを受け取って、matrix &といった参照型を返す。だが、たとえ返すmatrix &が一時オブジェクトを参照していたとしても、参照型は一時オブジェクトとは認識してくれず、operator=(const matrix &)が呼び出されてしまう。よって、コピー初期化が行われて動作が遅くなってしまう。この問題を解決するために、
+matrix fill(double value) && {
+    // 処理
+    return result ;
+}
+　というようにmatrix &&thisのときだけ、一時オブジェクトを返すようにすると、一時オブジェクトから呼び出されたときだけこれが呼ばれて、上のような式でもoperator=(matrix &&)を呼び出してくれるようになる。
+
+　すこし、これについて掘り下げる。下にある実験参照。fill()のスタック領域にresultを組み立てて、それをmain()のスタック領域に名前なし一時オブジェクトとしてムーブコンストラクタで保存する。
+　なので、参照型でないからといって遅いわけではない。もちろん参照型はmatrix *をコピーするだけだが、ムーブ初期化はdata, strides, shapeといった3つのポインタのコピーおよび引数のmatrixのそれらをNULLに書き換えるので少し遅くはなるのかな。
+　chatgptでは、
+matrix mul(double value) && {
+    // 処理
+    return std::move(result) ;
+}
+　としていて、これだとムーブコンストラクタを強制できるらしい。
+
+　そのあとは、
+result = matrix::rondom(3,3).fill()
+　となっているので、operator=(matrix &&)が呼び出されて、main()のスタック領域にある一時オブジェクトのポインタがoperator=()のスタック領域にコピーされる。
+
+　まあRVOがオンなら、main()にresultが構築されるのだが。
+
+
+
+
+
+　matrix("a.cmat")のところ。
+(*this) = (*this).T()
+　とすると、operator=((*this), (*this).T())が呼ばれて、T()は(*this)のstridesを入れ替えただけで、=では、左辺がviewでなく右辺がviewのときは、shape不一致で右辺を解放するので、(3, 4)とかだと(4, 3)になりshape不一致なので解放がおきてしまう。(*this)が解放されると、(*this).T()も解放されるのでつむ。
+　なので、
+matrix tmp = (*this).T()
+(*this) = tmp
+　とする必要がある。ここで、T()は一時オブジェクトを返すので、右辺は右辺値になりムーブコンストラクタがよばれるが、ムーブコンストラクタでは右辺がビューのときにはコピーにしているので、tmpにmallocで確保してコピーするという処理が行われる。これにより問題は解決する、はずだった。
+　しかし、RVOがオンになっていると、T()のresultがT()のスタック領域で構築されるところを、amatrix tmpに構築してしまう。ようは、ムーブコンストラクタもすべて無視してしまうのだ。
+
+　次にRVOをオフにした。すると解決した。そして、適当に遊んでいたところ、
+matrix tmp ;
+tmp = matrix(3, 3).T() ;
+　としたときに、なぜかcopyが2回行われていた。ただしこれはT()が関数のスタック領域に戻り値を構築してmatrix型で返すことによる。ようは、main()の名前なし一時オブジェクトに保存するときに、ムーブコンストラクタがよばれるものの、T()はビューを返し、ムーブコンストラクタでは右辺がビューのときにコピーになっているので、コピーが行われてしまうのだ。
+　さらに、operator=でも、コピーを行うので、二回コピーが行われることになる。だが、これはビューをムーブするとおかしくなるので、しょうがないのだ。ビューが一時オブジェクトであるときにムーブしてもいいようにするのはありだが。
+　いや、まて、ムーブコンストラクタでmain()に保存される一時オブジェクトはビューではない。なので、ちゃんとoperator=(matrix &&)を作ればムーブになるはず。
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+　実験。
+
+#include <iostream>
+
+class matrix {
+public:
+    matrix()
+        {std::cout << "Default constructed: " << (void *)this << "\n" ;}
+    matrix(const matrix& other)
+        {std::cout<<"Copy constructed: "<<(void *)this<<"<-"<<(void *)&other<<"\n" ;}
+    matrix(matrix&& other) noexcept
+        {std::cout<<"Move constructed: "<<(void *)this<<"<-"<<(void *)&other<<"\n" ;}
+    ~matrix()
+        {std::cout << "Destructed: " << (void *)this << "\n" ;}
+    matrix& operator=(const matrix& other)
+    {
+        std::cout << "Copy assigned\n" ;
+        return *this ;
+    }
+    matrix& operator=(matrix&& other) noexcept
+    {
+        std::cout << "Move assigned\n" ;
+        return *this ;
+    }
+};
+
+matrix method(matrix input)
+{
+    matrix result = input ; // resultがスタック上に生成
+    return result ;         // resultが戻り値としてムーブされる
+}
+
+int main()
+{
+    matrix mat_a ;
+    matrix mat_b = method(mat_a) ; // ムーブコンストラクタ
+    mat_b = method(mat_a) ;        // ムーブ代入演算子
+    return 0 ;
+}
+
+
+　これを、
+g++ -g -O0 -std=c++17 -fno-elide-constructors -o rvo_move rvo_move.cpp
+gdb ./rvo_move
+　として実行して、
+(gdb) break rvo_move.cpp:33
+Breakpoint 1 at 0x1275: file rvo_move.cpp, line 33.
+(gdb) break rvo_move.cpp:27
+Breakpoint 2 at 0x120c: file rvo_move.cpp, line 27.
+(gdb) break rvo_move.cpp:20
+Breakpoint 3 at 0x15c4: file rvo_move.cpp, line 20.
+(gdb) run
+　というようにブレークポイントを設定して実行。
+
+Breakpoint 1, main () at rvo_move.cpp:33
+33          matrix mat_a ;
+(gdb) next
+Default constructed: 0x7fffffffdb04
+34          matrix mat_b = method(mat_a) ; // ムーブコンストラクタ
+(gdb) next
+Copy constructed: 0x7fffffffdb07<-0x7fffffffdb04
+
+Breakpoint 2, method (input=...) at rvo_move.cpp:27
+27          matrix result = input ; // resultがスタック上に生成
+(gdb) next
+Copy constructed: 0x7fffffffdae7<-0x7fffffffdb07
+28          return result ;         // resultが戻り値としてムーブされる
+(gdb) next
+Move constructed: 0x7fffffffdb05<-0x7fffffffdae7
+29      }
+(gdb) next
+Destructed: 0x7fffffffdae7
+28          return result ;         // resultが戻り値としてムーブされる
+(gdb) next
+29      }
+(gdb) next
+Destructed: 0x7fffffffdb07
+
+main () at rvo_move.cpp:35
+35          mat_b = method(mat_a) ;        // ムーブ代入演算子
+(gdb) next
+Copy constructed: 0x7fffffffdb06<-0x7fffffffdb04
+
+Breakpoint 2, method (input=...) at rvo_move.cpp:27
+27          matrix result = input ; // resultがスタック上に生成
+(gdb) next
+Copy constructed: 0x7fffffffdae7<-0x7fffffffdb06
+28          return result ;         // resultが戻り値としてムーブされる
+(gdb) next
+Move constructed: 0x7fffffffdb07<-0x7fffffffdae7
+29      }
+(gdb) next
+Destructed: 0x7fffffffdae7
+28          return result ;         // resultが戻り値としてムーブされる
+(gdb) next
+29      }
+(gdb) next
+
+Breakpoint 3, matrix::operator= (this=0x7fffffffdb05, other=...) at rvo_move.cpp:20
+20              std::cout << "Move assigned\n" ;
+(gdb) next
+Move assigned
+21              return *this ;
+(gdb) info args
+this = 0x7fffffffdb05
+other = @0x7fffffffdb07: {<No data fields>}
+(gdb) next
+22          }
+(gdb) next
+Destructed: 0x7fffffffdb07
+Destructed: 0x7fffffffdb06
+main () at rvo_move.cpp:36
+36          return 0 ;
+(gdb) next
+37      }
+(gdb) next
+Destructed: 0x7fffffffdb05
+Destructed: 0x7fffffffdb04
+
+　となった。ここで、詳しく見ていきたい。
+matrix mat_a ;
+Default constructed: 0x7fffffffdb04
+　で、mat_a(0x7fffffffdb04)をmain()のスタック領域に確保。
+
+　次に、
+matrix mat_b = method(mat_a) ; // ムーブコンストラクタ
+　より、先に、
+mat_b = method(mat_a) ;        // ムーブ代入演算子
+　のほうを見ていく。
+
+mat_b = method(mat_a) ;        // ムーブ代入演算子
+　でmethod()に入り、
+matrix input = mat_a
+Copy constructed: 0x7fffffffdb06<-0x7fffffffdb04
+　で右辺が左辺値なのでコピー初期化を行うmatrix(const matrix &)が呼ばれて、input(0x7fffffffdb06)を引数の領域に確保。
+matrix result = input ; // resultがスタック上に生成
+Copy constructed: 0x7fffffffdae7<-0x7fffffffdb06
+　で右辺左辺値コピー初期化。result(0x7fffffffdae7)を確保。
+return result ;         // resultが戻り値としてムーブされる
+Move constructed: 0x7fffffffdb07<-0x7fffffffdae7
+　で、method()は一時オブジェクトを返すので、main()のスタック領域に名前なし一時オブジェクト(0x7fffffffdb07)として保存される。このときよばれるのはムーブコンストラクタmatrix(matrix &&)である。つまり、method()のスタック領域にあるresultのポインタがmatrix(matrix &&)に渡されて、ムーブ初期化によってmain()に保存されるということ。
+Destructed: 0x7fffffffdae7
+　ここで、result(0x7fffffffdae7)はデストラクタによって解放されて、input(0x7fffffffdb06)も解放されると思いきや、まだ解放されない。
+mat_b = method(mat_a)
+　の右辺で名前なし一時オブジェクト(0x7fffffffdb07)求まったので、operator=(matrix &&)が呼ばれる。
+(gdb) info args
+this = 0x7fffffffdb05
+other = @0x7fffffffdb07: {<No data fields>}
+　より、mat_b(0x7fffffffdb05)、名前なし一時オブジェクト(0x7fffffffdb07)はいいだろう。そして
+Move assigned
+　で、operator=(matrix &&)で本来なら実装されているムーブ処理が行われて、ここで、
+Destructed: 0x7fffffffdb07
+　で、名前なし一時オブジェクト(0x7fffffffdb07)が解放される。そしてこのタイミングで、
+Destructed: 0x7fffffffdb06
+　でinput(0x7fffffffdb06)も解放される。
+
+　次に
+matrix mat_b = method(mat_a)
+　をみていく。まずmethod()に入ってからの処理は上と同じで、
+matrix input = mat_a
+Copy constructed: 0x7fffffffdb07<-0x7fffffffdb04
+　で右辺左辺値コピー初期化。input(0x7fffffffdb07)を確保。
+matrix result = input ; // resultがスタック上に生成
+Copy constructed: 0x7fffffffdae7<-0x7fffffffdb07
+　で右辺左辺値コピー初期化。result(0x7fffffffdae7)を確保。
+return result ;         // resultが戻り値としてムーブされる
+Move constructed: 0x7fffffffdb05<-0x7fffffffdae7
+Destructed: 0x7fffffffdae7
+Destructed: 0x7fffffffdb07
+　となる。さて、これはおかしい。上のmat_b = method(mat_a)では、まずmain()の名前なし一時オブジェクトにムーブコンストラクタで保存してからoperator=(matrix &&)でMove assignedが行われていた。
+　しかし、こちらは、本来であれば、main()の名前なし一時オブジェクトにムーブコンストラクタで保存してから、またmatrix mat_b = method(mat_a)でムーブコンストラクタmatrix(matrix &&)が呼ばれ、引数のmatrix &&にはmain()の名前なし一時オブジェクトのポインタが入るはず。なのでムーブコンストラクタは二回呼ばれるはずなのだ。
+　だが、実際はムーブコンストラクタは一回だけである。これはどうやら最適化の一種で、method()のスタック領域を崩すまえに、ムーブコンストラクタmatrix(matrix &&)を呼び出して、引数のmatrix &&にmethod()のスタック領域にあるresultのポインタを渡して、直接matrix mat_bの初期化に使っている。
+
+
+
+
+　matrix mat_b = method(mat_a)のムーブコンストラクタの最適化と、mat_b = method(mat_a)のinput(0x7fffffffdb06)が解放されるタイミング以外は理解している通りだった。
+
+　inputに関しては、gptいわく、次のようなことが起きているらしい。
+　C++では、関数に渡された引数が、関数のスタックフレームを抜けても一時的に生き残る場合があり、特に、右辺値参照（matrix&&）やムーブ操作が関係している場合、この最適化が適用されることがある。
+　inputは関数methodの引数としてコピー初期化されたオブジェクトで、このオブジェクトはmethodの終了時に解放されるのが通常だが、以下の理由によりoperator=の終了時まで生存している。
+　C++の標準では、関数の戻り値をムーブした後も、関数の引数はそのムーブ先が処理を終えるまで生存することが保証されている。これにより、引数の破棄が早すぎて未定義動作を引き起こすリスクを回避している。
+　inputの生存期間がoperator=の終了まで延長される理由は、関数引数として渡されたオブジェクトが内部で使用されている可能性を考慮しているため。
+　具体的には、
+matrix method(matrix input) {
+    // inputを直接参照する操作（例: ログ、他のリソース解放など）がある場合
+    return input;
+}
+　この場合、inputが関数終了時に即座に破棄されると、戻り値を正しく処理する前にリソースが解放され、未定義動作を引き起こす可能性があります。そのため、C++では引数を一時的に延命させる仕様になっています。
+
+
+
+
+
+
+　さて、rvoをオンにして解析する。
+-fno-elide-constructors
+　をコンパイルコマンドから消して実行。dgbそのままだと冗長なので、nextとかは消している。
+
+33          matrix mat_a ;
+Default constructed: 0x7fffffffdb04
+34          matrix mat_b = method(mat_a) ; // ムーブコンストラクタ
+Copy constructed: 0x7fffffffdb07<-0x7fffffffdb04
+27          matrix result = input ; // resultがスタック上に生成
+Copy constructed: 0x7fffffffdb05<-0x7fffffffdb07
+28          return result ;         // resultが戻り値としてムーブされる
+29      }
+Destructed: 0x7fffffffdb07
+35          mat_b = method(mat_a) ;        // ムーブ代入演算子
+Copy constructed: 0x7fffffffdb06<-0x7fffffffdb04
+27          matrix result = input ; // resultがスタック上に生成
+Copy constructed: 0x7fffffffdb07<-0x7fffffffdb06
+28          return result ;         // resultが戻り値としてムーブされる
+29      }
+20              std::cout << "Move assigned: "<<(void *)this<<"<-"<<(void *)&other<<"\n" ;
+
+(gdb) info args
+this = 0x7fffffffdb05
+other = @0x7fffffffdb07: {<No data fields>}
+
+Move assigned: 0x7fffffffdb05<-0x7fffffffdb07
+21              return *this ;
+22          }
+Destructed: 0x7fffffffdb07
+Destructed: 0x7fffffffdb06
+main () at rvo_move.cpp:36
+36          return 0 ;
+37      }
+Destructed: 0x7fffffffdb05
+Destructed: 0x7fffffffdb04
+
+　という感じ。rvoなしを理解していればすらすら読める。mat_a(0x7fffffffdb04)を確保して、
+matrix mat_b = method(mat_a)
+　でmethod()に入る。
+matrix input = mat_a
+　でコピー初期化でinput(0x7fffffffdb07)を確保して、
+matrix result = input
+　でコピー初期化でresult(0x7fffffffdb05)を確保。ただしこのresultはrvoによって、method()のスタック領域ではなく、main()のスタック領域のmat_bに直接構築される。なので、mat_bはresultと同じく(0x7fffffffdb05)であり、
+Destructed: 0x7fffffffdb07
+　でinputだけ解放されている。
+
+mat_b = method(mat_a)
+　でmethod()に入り、同様にinput(0x7fffffffdb06)とresult(0x7fffffffdb07)をコピー初期化で構築。そして、resultはmethod()のスタック領域ではなく、main()のスタック領域に名前なし一時オブジェクトとして構築される。そしてmethod()終了時にinputが解放されていないのはrvoなしと同様。
+　つぎにoperator=(matrix &&)が呼ばれる。info argsで見ると、this(0x7fffffffdb05)がmat_bで、other(0x7fffffffdb07)がmain()のスタック領域に直接構築された名前なし一時オブジェクトで、これら二つがoperator=(matrix &&)に引数としてポインタを渡している。
+　operator=(matrix &&)終了後に
+Destructed: 0x7fffffffdb07
+Destructed: 0x7fffffffdb06
+　でinput(0x7fffffffdb06)と名前なし一時オブジェクト(0x7fffffffdb07)が解放される。このタイミングでinputが解放されるのはrvoなしと同様。
+　main()終了時に、
+Destructed: 0x7fffffffdb05
+Destructed: 0x7fffffffdb04
+　でmat_aとmat_bが解放されて終わり。
+
+　rvoは本来関数のスタック領域で構築されるはずの戻り値を、直接呼び出し元に構築するものだが、ここでどこに構築するのか規則性が見えてきた。rvoなしと比較すると、通常はmain()のスタック領域に名前なし一時オブジェクトとして構築するのだろう。ただし、ムーブコンストラクタのときのムーブスキップと合わさることで、
+matrix tmp = (*this).T()
+　でtmpに直接構築するようになっている。
+
+　rvoの利点を考える。matrix.hppでは、ほとんどのインスタンス関数は引数は参照型である。返すのが一時オブジェクトだったときに、それをmain()に直接構築するのと、ムーブコンストラクタを呼ぶのとどちらが高速か。たしかにrvoありのほうが高速なのかな。ただ、以下に書いたように、ムーブスキップと合わさると挙動を超えてくるのがなんとも。
+
+　というか、rvoなしだとビューを一時オブジェクトとして返しても、main()に一時オブジェクトとして保存される際に、綺麗な状態になるわけで、operator=(matrix &&)で引数にビューが渡されることはないのだろう。matrix(matrix &&)はムーブスキップがあるのでビューが引数になることはあるが。ただ、rvoありなら、main()に直接ビューが構築されるのでそうもいかない。
+
+　あと、ここに書くのは紛らわしいかもしれないが、
+double a = method(3.0)
+　とかは、method()で構築されたresultがaに直接コピーされるわけだが、
+matrix a = method(3.0)
+　のようにmethod()が返すのが自作クラスになった瞬間に、一時オブジェクトという概念が使われて、まず、main()で一時オブジェクトがムーブコンストラクタで作られてから二度目のムーブコンストラクタが呼ばれてムーブ処理が行われるという、かなり複雑な挙動になる。
+
+
+
+　そして、これがあのmatrix(a.cmat)のときの問題につながっていたのだ。
+　rvoもムーブスキップもなしなら、T()が返す一時オブジェクトが名前なし一時オブジェクトとしてムーブコンストラクタでmain()のスタック領域に保存される際に、ムーブコンストラクタではビューはコピーするようにしているのでコピー初期化でビューでない綺麗な一時オブジェクトが確保されたのちに、tmpの初期化でムーブコンストラクタでムーブが行われる。
+　これでムーブスキップがオンになると最初のビューを引数にしたムーブコンストラクタが直接tmpを初期化することになる。ただし、これについてはコピーになるので予想通りの挙動になる。
+　これにさらにrvoがオンになることで、ムーブスキップと合わさって、ムーブコンストラクタが一度も呼び出されないままtmpにT()が返すビューが直接構築されてしまうのだ。
+
+matrix tmp ;
+tmp = (*this).T()
+　では、rvoなしなら、T()の一時オブジェクトがmain()のスタック領域に名前なし一時オブジェクトにムーブコンストラクタによって保存されるが、ビューであるゆえコピーが起きてビューでない綺麗な一時オブジェクトが保存される。そしてそのポインタがoperator=(matrix &&)に渡されて、ムーブ処理が行われる。前にコピーが二回行われたのは、そのときに書いたようにoperator=(matrix &&)を実装していなかったから。
+　rvoありなら、T()のビューがmain()のスタック領域に直接構築されるので、rvoなしとはちがって、main()のスタック領域にあるのはビューである。そしてoperator=(matrix &&)に渡されて、ビューのときはコピーになるのでコピーが行われる。
+　なので、matrix tmp ; tmp =と分けた場合はrvoありなしどちらも問題は発生しない。
+
+
+
+
+
+
+
+
+
+
+
+　上の分析をしていて気づいたのだが、
+mat_a(slice(), 3) = mat_b ;
+　としたときに、rvoなしだと右辺でまずoperator()のスタック領域にビューが一時オブジェクトとして構築されて、その後main()のスタック領域にムーブコンストラクタで保存されるが、ムーブコンストラクタmatrix(matrix &&)でotherがビューだったときにコピーにすると、左辺のmat_a(slice(), 3)は新しいdataのmatrixであるわけで、mat_bの値をコピーしても、mat_aは書き換えできない。
+　rvoありだと、main()に直接ビューができるので成り立つが。これだとあまりにも不安定なので、matrix(matrix &&)、およびoperator=()ではビューであってもムーブするようにした。これにより名前ありの変数にもビューを入れられるようになった。
+　というかnumpyでも、
+i = mat(slice(), j)
+i(3) = 3
+　のようにして、iにビューを保存しておいて、あとで書き換えるということができた。イテラブルでforないでの書き換えはできないものの、numpyはビューであるゆえできるという、特殊な扱いだったのだが、これを実現するためにも、ビューのムーブは必要。
+
+　これによって、上のような問題はすべて解決した。
+matrix tmp = (*this).T()
+　も、tmpにコピーしたいのにrvoでtmpに構築されるとかややこしかったが、結局この最適化は右辺が右辺値ならムーブでしょ、だからこっちでtmpに構築するよ、というものである。ようは、右辺が右辺値ならムーブ、右辺が左辺値ならコピーというのがデフォルトであり、それをもとに最適化が行われる。なのでそれに従うのがいいと思う。
+　いまは、
+matrix tmp1 = (*this).T() ;
+matrix tmp2 = tmp1 ;
+　というようにしてコピーしている。まあ、行優先でよみこむために転置にすると形が合わなくなるのでいまはfor i for j (*this)(i, j) = input.read()にしているのだが。
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+　const。
+
+void display() const {
+    // 実装
+}
+　のように、引数のあとにconstをつける。これはGPTに聞く前に察しはついていたが、thisの書き換えができないという意味らしい。display関数のような読み込みだけの関数につける。
+　といっても、別に自分で書き換えないように実装すればいいだけなので、そこまで重要じゃないように思える。しかし、クラスのインスタンスに、
+const matrix a(3, 3) ;
+　というようにconstをつけることができる。これは変数であれば書き換え不可、構造体でも書き換え不可という意味だが、クラスの場合は構造体の関数の融合なわけである。クラスのインスタンスにconstをつけると、構造体のようにメンバ変数の書き換えはできないのはいいとして、さらにconstつきのインスタンス関数しか呼び出せなくなる。
+　よって、constをつけるのを怠ると、インスタンスにconstをつけたときに、インスタンス関数がなにも呼び出せなくなってしまう。
+
+double& operator()(unsigned int i, unsigned int j) {
+    return matrix[i * col + j];
+}
+
+const double& operator()(unsigned int i, unsigned int j) const {
+    return matrix[i * col + j];
+}
+　について。オーバーロードは引数の数や型がちがうときに有効だが、cppでは引数のあとの、thisの書き換えの不可を示すconstが、あるかないかでもオーバーロードが可能である。戻り値のconstは関係ないので注意。
+　const修飾つきのインスタンスはconst修飾つきのインスタンス関数しか呼び出せないが、const修飾なしのインスタンスはconst修飾つき、なしのどちらも呼び出せる。const修飾つきのインスタンス関数しかないときはそれを呼び出すが、このコードのようにどちらもある場合はconst修飾なしを優先する。
+　よって、このようにconst修飾つき、なしの二つのインスタンス関数を定義しておくことで、const修飾つきのインスタンスはconst修飾つきのインスタンス関数を、なしのインスタンスはなしのインスタンス関数を呼び出すようにできる。
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+　operator*の優先順位。friend。
+
+　pythonではa * bとしたときに、a.__mul__()、そしてb.__rmul__()の順に探索していた。cppでは__rmul__は定義できない。なので、インスタンス関数で*をオーバーロードしても、mat * 3.0はできても3.0 * matができないわけだが、その変わりに静的関数としてoperatorをオーバーロードすれば3.0 * matを定義できる。ようは、
+class matrix {...}
+　と定義しておいて、classの外で、
+matrix operator*(const double, const matrix& b) {...}
+　と定義すればいい。実際、探索順序はa * bならaのインスタンス関数のoperator*、次に非メンバ関数、つまり静的関数のoperator*。
+
+　ここで、operator*ではmatrixのdataやrows, colsにアクセスする必要があるが、privateにしている場合は静的関数からインスタンス変数にアクセスできなくなってしまう。
+　ここで、friend修飾を使って、
+class matrix {
+    friend matrix operator*(const double, const matrix& b) ;
+}
+matrix operator*(const double, const matrix& b) {...}
+　とすれば、matrix operator*(const double, const matrix& b)にアクセス権を与えることができる。
+
+　また、これをさらに可読性をあげるために、
+class matrix {
+    friend matrix operator*(const double, const matrix& b) {...}
+}
+　というようにして、friend修飾つきに限り、静的関数をclassの中で実装することができる。ただし、classはインスタンス関数も含めてinclude時にコンパイルされる。静的関数は、仮引数宣言を最初にして、実装をmain関数のあとにすれば、呼び出される関数だけコンパイルするようにできる。
+　なので、静的関数であるoperatorをclass内で実装すると、コンパイルが確定してしまうので注意が必要。
+
+
+　pythonのように、3 / 2を1.5にしたので、operator/(int, int)をオーバーロードすればいけるかと思ったのだが、どうやら、引数がプリミティブ型のみで構成される場合、オーバーロードするとエラーになるらしい。実験したい。
+　これは、言語自体が変わってしまうゆえ、一貫性を保つためにそうしているのかな。実際にstr.hppでためしにchar *とchar *のoperator+を作ったら、
+In file included from workspace.cpp:2:
+/home/lucifer/d/software/handmade/cpp/library_cpp_handmade/str.hpp:40:18: error: ‘char* operator+(char*, char*)’ must have an argument of class or enumerated type
+   40 |     friend char *operator+(char *strings_a, char *strings_b)
+      |                  ^~~~~~~~
+　というエラーがでた。
+
+
+　また、friendは関数だけでなく、classにもつけられる。
+class A {
+    friend class B ;
+}
+　とすると、Aのprivateなインスタンス変数へのアクセス権をclass Bに与えることができる。ただ、これはなかなかめんどくさくて、
+       
+class B;  // 前方宣言
+
+class A {
+private:
+    int value;
+
+public:
+    A(int v) : value(v) {}
+    friend class B;  // B が A にアクセスできるようにする
+};
+
+class B {
+public:
+    void showValue(A& a) {
+        std::cout << a.value << std::endl;  // B は A の private メンバにアクセス可能
+    }
+};
+　というように、classを前方宣言などの必要がでてくる。
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+　cppの本質。
+
+　pythonやjavaでは動的確保とガベージコレクションを駆使することでオブジェクト指向を実現している。具体的には、
+mat = mat_a * (mat_b + mat_c)
+　としたときに、mat_b + mat_cで返ってきた和のmatrixをmat_a.__mul__()の引数に代入し、答えをもとめmatに代入。このとき、引数に渡した和のmatrixはどのポインタ変数にも入っていないためガベージコレクションにより自動解放。これをC言語でやると和のmatrixがメモリから解放されないままポインタをlostしてしまうので、
+mat_tmp = mat_b + mat_c
+mat = mat_a * mat_tmp
+free(mat_tmp)
+　と書く必要があり、めんどくさい。
+
+　また、C言語でも動的確保がデフォルトで、これは構造体を初期化して返すinit関数で、
+Matrix *mat = init(3, 4) ;
+　とするのが便利だからというのと、matrixの中身を書き換える関数で、いちいちmat_fill(&mat, 3)というように、&をつけるのがめんどくさいことによる。
+
+　cppではコンストラクタがあるのと、参照型があることで、C言語の動的確保を使う理由をある程度解消している。具体的には、
+Matrix mat(3, 4) ;
+　とすればinitが静的確保でも使えて、mat_fill(Matrix &mat, int value)という形にしておけば、mat_fill(mat, 3)というように&をつけずとも静的確保したものを書き換えられる。
+
+　だが、これだけではjavaやpythonのようなオブジェクト指向を実現したとはいえず、たとえ静的確保を便利につかえるとしたとしても、静的確保の最大のデメリットである、関数終了までメモリ解放できないという問題を解決できていない。
+
+　matrix.cppをみてみたが、+や-などで静的確保したmatrixを返していた。まぁ、静的確保したものを返すとバイナリが返されるので、できなくはないが、C言語ではやろうとしなかった。
+　いや、実際C言語でこれをやるといちいちバイナリを呼び出し元のmatrixにコピーする必要があるため遅くなってしまう。動的確保、つまり、メモリに値を入れて、その番地を返す場合は、関数内で静的に確保されてスタック領域に確保されたメモリの番地のバイナリ8byteだけを、呼び出し元のポインタ変数が格納されているメモリにコピーするだけでいいのでこっちのほうが速い。
+　つまり、C言語では、
+Matrix mat_c = mat_a + mat_b
+　とすると、mat_cが静的に確保されて、+がreturnしたmatrixのバイナリをmat_cにコピーすることになる。
+
+　ところが、cppではこれが最適化されている。cppで、
+Matrix mat_c = mat_a + mat_b
+　とすると、mat_cはその返したバイナリが格納されているメモリを直接mat_cに割り当てるため、コビーは行われない。これはいわゆるムーブ初期化と言われる、インスタンスの初期化方法らしい。
+Matirx mat_c ;
+　とするのは、コンストラクタを使わずに静的確保しようとしているため、エラーが出るらしい。引数なしコンストラクタを定義すればできた。コンストラクタ0か、引数なしコンストラクタを持つかどちらかの条件を満たす必要がある。
+　とにかく、ムーブ初期化か、コンストラクタによる
+Matrix mat(3,4)
+　という初期化か、どちらかしか使えない。あと、コピー初期化というのもあって、さっきのムーブ初期化をあえてコピーするようにすることもできるらしい。といっても、関数の戻り値は変数にコピーしたらそのまま消えるので、ムーブをあえてコピーにする意味がない気がするが。
+　これもようは静的確保を基本としたコーディングをサポートしていることになるが、オブジェクト指向につながっているわけではない。
+
+
+　結局今の理解では、C言語でなくcppを使うメリットは次のものしかない。
+　namespaceで、mat_init()を、namespace mat{init()}とかけば、いちいちmatを関数につけなくてよくなる。といっても、ライブラリの関数をすべてclassのインスタンスmethodにすれば、クラス名だけ衝突しなければいいので、mamespaceはあまり必要ないかも。namespaceはクラス指向でなく、関数指向のライブラリに有効なだけ。
+　構造体と関数をセットにしたclassを定義できて、
+Matrix *mat = mat_init(3,4)
+-> Matrix *mat = new Matrix(3,4)
+add(mat_a, mat_b)
+-> mat.add(mat_b)
+　というように簡単にかける。
+　C言語では動的確保を基本としたコーディングにしていて、それは静的確保が使いづらいからであるが、cppでは静的確保の使いづらさを解決しているため、静的確保を中心としたコーティングが可能。これにより、関数の最後にfreeをたくさん書く必要はないが、関数が終わらないとfreeは自動で行われない。
+　いま気づいたがデストラクタで、matrix.dataだけfreeしているが、これはmatrixという構造体と、doubleの配列をメモリに確保しているわけで、matrixが静的確保だったとしても、doubleは動的確保であるわけだが、関数終了時に静的確保は解放されるゆえ、doubleが解放されずポインタをロストしてしまう。しかし、デストラクタによって、これが自動的に呼び出されてdoubleも解放してくれるのだろう。
+
+　逆に、
+print(mat(3,3) + mat(3,3))
+　というようなPythonの動的確保とガベージコレクションを駆使したコーディングはできなくて、cppでもC言同様に、
+Matrix *a = new Matrix(3,3)
+Matrix *b = new Matrix(3,3)
+Matrix *c = a + b
+print(c)
+free(a)
+free(b)
+free(c)
+　と書く必要がある。まぁさっき書いた通り静的確保なら関数終了時に限られるものの自動で解放してくれるので、
+{
+Matrix a(3,3)
+Matrix b(3,3)
+Matrix c = a + b
+print(c)
+}
+　と書けるわけだが。
+
+　いやまてよ、print(a + b)とできるはず。静的確保なんだから。できるよね。print(3+4)いけるもんね。
+
+
+
+　ここで、C言語の静的確保について、コンパイラレベルの理解をしたい。
+
+　多くのCコンパイラは、
+int sum = 3 + 4;
+　のような定数リテラル同士の計算を見つけると、コンパイル時に計算結果を直接代入するという、定数畳み込みという最適化を行う。この最適化が行われると、実行時には3と4の加算は行われず、
+int sum = 7;
+　と同様のバイナリコードが生成される。しかし、
+int a = 3;
+int b = 4;
+int sum = a + b;
+　のように変数や計算式が絡むと、コンパイラは定数畳み込みを行わず、コードのままのバイナリコードを生成する。そのバイナリコードでは、まずa用の4byteを確保し03 00 00 00を書き込み、同様にbも確保と書き込みを行う。次に、sum用の4byteをメモリに確保する。そして、aとbのメモリにある03 00 00 00と04 00 00 00をそれぞれ、CPUのレジスタやスタックの一時領域にロードする。そしてCPUが、03 00 00 00 + 04 00 00 00の計算を実行し、結果である07 00 00 00を一時的なレジスタに格納する。あとは、それをsum用の4byteのメモリに書き込む。
+
+　同様にして、
+int a = 3;
+int b = 4;
+printf("%d", a + b);
+　の内部処理についてまとめる。まず、aとb用にそれぞれ4byteを確保し、それぞれバイナリを書き込む。printf関数の呼び出しで、関数用のスタック領域が確保される。ここで、printfの挙動は置いておいて、重要なのはその関数用スタック領域に引数用のintの4byteが確保されることにである。次に、確保したスタック領域に引数を書き込む。このときに、a + bを先ほどと同様にcpuで計算し、cpuの一時的なレジスタにある07 00 00 00を、prntf用のスタック領域のint4byteのメモリに書き込む。そして、printfの処理をした後、関数終了時に計算結果の07 00 00 00も含めたすべてのprintf用のスタック領域を解放する。
+
+
+　つまり、静的確保を中心としたコーディングでは、
+print(mat_a + mat_b)
+　とすることができる。
+　しかし、C言語で静的確保を中心としたコーディングをしたとしても、計算結果のmatrixのバイナリには動的に確保されたdoubleの配列のポインタ8byteが含まれているわけで、このポインタがロストしてしまい、解放することも使用することもできなくなってしまう。
+　cppでは静的確保が手厚くサポートされているゆえ、printf(mat_a + mat_b)としたときに、関数終了時の関数のスタック領域が解放されるときに、matrixのデストラクタが呼び出されて、double型の配列も解放される。
+
+　つまり、cppの本質は静的確保をベースとしたオブジェクト指向なのだ。pythonやjavaの動的確保とガベージコレクションを駆使したオブジェクト指向とは異なる。
+
+　それに、クラスとインスタンス関数もある。上に書いた通り
+mat_print(mat_a)
+-> mat_a.print()
+　と書くことができるわけで、
+(mat_a + mat_b).print()
+　とチェーンさせていくことも可能。これも結局
+mat_print(mat_a + mat_b)
+　を書きやすくしただけなのだから。
+
+
+
+
+
+　おふろで考えていた。構造体を静的確保でなく動的確保にするのは、単方向リストでheadをあたえるときに、静的確保で、
+NODE head ;
+　とすると、
+list_append(head) ;
+　としたときに、関数ではheadはポインタでないので、head.nextとしてnextにアクセスするが、さらに次のノードはhaed.next->next->nextというようになる。ようはheadだけ.を使うのでそれなら、
+NODE *head ;
+list_append(haed) ;
+　として、ポインタを受け取れば、head->nextとできる。
+
+　たとえmatrixのような構造体でも静的確保は可能で、たとえば、
+matrix {
+    LIST *data ;
+    int rows ;
+    int cols ;
+}
+　というようなmatrixのなかにLIST *があって、さらにLISTはdoubleなどいろんなデータのポインタの配列だとすると、matrixが8+4+4で16byteで、そのうちLISTが10個のポインタ配列なら80byteで、さらにdoubleであれば8byteであり、matrix1つに対し10個あるということになる。
+　このような多層にわたる構造体は静的確保は不可能だと思っていた。だが、よく考えてみれば16byteのmatrixの部分は静的確保に、それより下層のLISTやdoubleはヒープ領域に動的確保すればいいだけの話である。
+　mat_init()でも16byteは静的確保を行い、16byteをreturnすればよい。
+
+
+　matrixの*のように、関数内で静的確保して、もちろんこのときにコンストラクタで2層以降はヒープ領域に動的確保しているわけだが、その静的確保したものを値渡し、つまりmarix型でreturnした場合は、
+matrix d = a + (b * c)
+　としたときに、b * cは一時オブジェクトとして生成されるため、この一行が終わるとデストラクタで2層目以降のヒープ領域もまとめて解放してくれる。
+
+　このように、デストラクタをうまく使えるかどうかがcppの鍵である。といってもただ静的確保してreturnするだけなので難しいわけではないが。
+
+
+
