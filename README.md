@@ -1,6 +1,8 @@
 ### markdown(.md)
 　githubでよくみるREADME.mdはmarkdown。つまり拡張子は.md。chatGPTのテキストもmarkdown。ただ、markdownといっても表示するビューワによって変わるような気がする。
+
 　cli viewerにはmdcat, glow, batがある。見比べてみたところ、デフォルトで入ってるmdcatがいいかもしれない。ただ、$$によるlatexブロックがだめだった。
+
 　discordは斜体や画像、tableもダメで、latexの$a$は斜体になる。コードは行けた。
 
 
