@@ -1,3 +1,45 @@
+| version 15.2 ~ |
+| hostname itbc-usr-l3s{} | | 01 | 02 | 03 | 04 | 05 | 06 | 07 | 08 | 09 | 10 | 11 | 12 | 13 | 14 |
+| enable secret 5 $1${} | | y1EX$xifUDIX9by4ehIRTbUDjz/ | ryFA$xcmbK27Dlz5s4ireOK/Bw. | kER.$wG0dqRmsE.wcs3cD1jrTu0 | glvd$ySOPnBmD/qMGoJgeJCRfQ1 | uP8e$TRz/fBCFOTGN1r.7J3dGP0 | kI/b$cv0C8wBXcsK86RNs1aaEB/ | R51D$av.Ss9AgCYVBUXAZGKcM5. | PRIR$a6yayK9y8svpOlDUaAXXe1 | nRr8$7cy0P0IORDfOaOE0iGSe4/ | 5BCS$pBEv8sbxNxdw57YhATIm4. | yCxi$nnPNYjKCA6n5dsCtoRUWh0 | W1GB$OGDMDFSEKAwAAndaQYlD31 | aJ.L$Y3icejLUgFWCz/cPpJX2.0 | NUav$HLJ9jK0Q3TG6YsJ1Ifnaa0 |
+| interface Loopback0 ~ interface Vlan1 |
+| router ospf 1 | router-id 10.128.128.{} | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18 |
+| router ospf 1 | redistribute connected metric {} metric-type 1 subnets | 100 | 1000 | 100 | 1000 | 100 | 1000 | 100 | 1000 | 100 | 1000 | 100 | 1000 | 100 | 1000 |
+| router ospf 1 | redistribute static metric {} metric-type 1 subnets | 100 | 1000 | 100 | 1000 | 100 | 1000 | 100 | 1000 | 100 | 1000 | 100 | 1000 | 100 | 1000 |
+| router ospf 1 | network 10.128.1.{} 0.0.0.3 area 0.0.0.0 | 44 | 48 | 52 | 56 | 60 | 64 | 68 | 72 | 76 | 80 | 84 | 88 | 92 | 96 |
+| router ospf 1 | network 10.128.1.{} 0.0.0.3 area 0.0.0.0 | 124 | 128 | 132 | 136 | 140 | 144 | 148 | 152 | 156 | 160 | 164 | 168 | 172 | 176 |
+| router ospf 1 | network 10.128.128.{} 0.0.0.0 area 0.0.0.0 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | none | 18 |
+| line con 0 | password 7 {} | 121700035F04020178 | 030A5E1F4B002F491C | 06080A350141071C57 | 09424B1D540A191759 | 000A1612495405035D | 121700035F04020178 | 121700035F04020178 | 030A5E1F4B002F491C | 04550E12422E424B5B | 030A5E1F4B002F491C | 0505031B6C43400C4B | 09424B1D540A191759 | 082F495A44160B1240 | 011D03101604080A73 |
+| line vty 0 4 | password 7 {} | 0505031B6C43400C4B | 030A5E1F4B002F491C | 06080A350141071C57 | 09424B1D540A191759 | 000A1612495405035D | 121700035F04020178 | 121700035F04020178 | 030A5E1F4B002F491C | 04550E12422E424B5B | 030A5E1F4B002F491C | 0505031B6C43400C4B | 09424B1D540A191759 | 082F495A44160B1240 | 011D03101604080A73 |
+| other | | "+ ip access-list standard acl_snmp_in | permit 10.124.235.15 log
++ ip access-list standard acl_snmp_in | permit 10.124.235.14 log
++ ip access-list standard acl_snmp_in | permit 10.124.235.54 log
++ ip access-list standard acl_snmp_in | permit 10.124.235.51 log
++ ip access-list standard acl_snmp_in | permit 10.124.235.50 log
+- ip access-list standard acl_snmp_in | permit 10.124.235.61 log
+- snmp-server enable traps bfd
+- snmp-server enable traps trustsec-sxp conn-srcaddr-err msg-parse-err conn-config-err binding-
+- snmp-server enable traps ospfv3 state-change
+- snmp-server enable traps ospfv3 errors
+- snmp-server enable traps stackwise
+- snmp-server enable traps bulkstat collection transfer
++ snmp-server host 10.124.235.50 version 2c Net_RO_28!47
++ snmp-server host 10.124.235.51 version 2c Net_RO_28!47
++ snmp-server host 10.124.235.54 version 2c Net_RO_28!47" | "- snmp-server enable traps bfd
+- snmp-server enable traps trustsec-sxp conn-srcaddr-err msg-parse-err conn-config-err binding-
+- snmp-server enable traps ospfv3 state-change
+- snmp-server enable traps ospfv3 errors
+- snmp-server enable traps stackwise
+- snmp-server enable traps bulkstat collection transfer " | | | "- snmp-server enable *
++ snmp-server enable traps snmp authentication linkdown linkup coldstart warmstart" | "- snmp-server enable *
++ snmp-server enable traps snmp authentication linkdown linkup coldstart warmstart" | | | "+ ip route 202.122.142.128 255.255.255.224 GigabitEthernet0/1 202.122.136.234
+- line con 0::logging synchronous" | "+ ip route 202.122.142.128 255.255.255.224 GigabitEthernet0/1 202.122.136.234
+- line con 0::logging synchronous
+- line vty 0 4::logging synchronous" | | "+ router ospf 1 | network 10.0.255.17 0.0.0.0 area 0.0.0.0" | "+ ip route 202.122.142.32 255.255.255.224 GigabitEthernet0/1 202.122.136.238"
+| ~ end |
+
+
+
+
   
    
 ### 概要  
