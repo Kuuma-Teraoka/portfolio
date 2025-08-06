@@ -12,12 +12,12 @@
 | router ospf 1 | network 10.128.128.{} 0.0.0.0 area 0.0.0.0 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | none | 18 |
 | line con 0 | password 7 {} | 121700035F04020178 | 030A5E1F4B002F491C | 06080A350141071C57 | 09424B1D540A191759 | 000A1612495405035D | 121700035F04020178 | 121700035F04020178 | 030A5E1F4B002F491C | 04550E12422E424B5B | 030A5E1F4B002F491C | 0505031B6C43400C4B | 09424B1D540A191759 | 082F495A44160B1240 | 011D03101604080A73 |
 | line vty 0 4 | password 7 {} | 0505031B6C43400C4B | 030A5E1F4B002F491C | 06080A350141071C57 | 09424B1D540A191759 | 000A1612495405035D | 121700035F04020178 | 121700035F04020178 | 030A5E1F4B002F491C | 04550E12422E424B5B | 030A5E1F4B002F491C | 0505031B6C43400C4B | 09424B1D540A191759 | 082F495A44160B1240 | 011D03101604080A73 |
-| other | | "+ ip access-list standard acl_snmp_in | permit 10.124.235.15 log
-+ ip access-list standard acl_snmp_in | permit 10.124.235.14 log
-+ ip access-list standard acl_snmp_in | permit 10.124.235.54 log
-+ ip access-list standard acl_snmp_in | permit 10.124.235.51 log
-+ ip access-list standard acl_snmp_in | permit 10.124.235.50 log
-- ip access-list standard acl_snmp_in | permit 10.124.235.61 log
+| other | | "+ ip access-list standard acl_snmp_in::permit 10.124.235.15 log
++ ip access-list standard acl_snmp_in::permit 10.124.235.14 log
++ ip access-list standard acl_snmp_in::permit 10.124.235.54 log
++ ip access-list standard acl_snmp_in::permit 10.124.235.51 log
++ ip access-list standard acl_snmp_in::permit 10.124.235.50 log
+- ip access-list standard acl_snmp_in::permit 10.124.235.61 log
 - snmp-server enable traps bfd
 - snmp-server enable traps trustsec-sxp conn-srcaddr-err msg-parse-err conn-config-err binding-
 - snmp-server enable traps ospfv3 state-change
