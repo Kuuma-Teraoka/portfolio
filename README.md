@@ -1,5 +1,5 @@
 | hostname itbc-usr-l3s{} | | 01 | 02 | 03 | 04 | 05 | 06 | 07 | 08 | 09 | 10 | 11 | 12 | 13 | 14 |
-|----|----|----|----|----|----|----|----|----|----|----|----|----|----|----|----|
+|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|
 | version 15.2 ~ |
 | hostname itbc-usr-l3s{} | | 01 | 02 | 03 | 04 | 05 | 06 | 07 | 08 | 09 | 10 | 11 | 12 | 13 | 14 |
 | enable secret 5 $1${} | | y1EX$xifUDIX9by4ehIRTbUDjz/ | ryFA$xcmbK27Dlz5s4ireOK/Bw. | kER.$wG0dqRmsE.wcs3cD1jrTu0 | glvd$ySOPnBmD/qMGoJgeJCRfQ1 | uP8e$TRz/fBCFOTGN1r.7J3dGP0 | kI/b$cv0C8wBXcsK86RNs1aaEB/ | R51D$av.Ss9AgCYVBUXAZGKcM5. | PRIR$a6yayK9y8svpOlDUaAXXe1 | nRr8$7cy0P0IORDfOaOE0iGSe4/ | 5BCS$pBEv8sbxNxdw57YhATIm4. | yCxi$nnPNYjKCA6n5dsCtoRUWh0 | W1GB$OGDMDFSEKAwAAndaQYlD31 | aJ.L$Y3icejLUgFWCz/cPpJX2.0 | NUav$HLJ9jK0Q3TG6YsJ1Ifnaa0 |
