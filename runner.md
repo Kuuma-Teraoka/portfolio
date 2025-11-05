@@ -39,9 +39,11 @@ $ lualatex -output-directory=$BUILD_PATH/build/handmade als.tex
 
 ### typescript
 　コマンドを見ればそこまで難しくない。
+
 - $1: "~/inbox/hello.ts"
 - ${1%.ts}: "~/inbox/hello"
 - $(basename ${1%.ts}): "hello"
+
 というように変換していることに注意。
 
 ### javascript
@@ -77,6 +79,7 @@ chmod 755 $BUILD_PATH/dist/handmade/bin/ls
 
 ### java
 　main, libraryという概念はないものの、自分をimportしている他のクラスが1つでもあるクラスは、すべてMainなしjarである`lib_java_handmade.jar`にまとめる。そしてこれを.aのように使って、cliで使いたいjavaのクラスをMainありjarとして、`lib_java_handmade.jar`のクラスも全て含めたjarにして、単独で使えるようにする。これはcppでの.aによってコンパイルした動的リンクのない、単独で動作する実行バイナリと同じである。
+
 　ここで、できればエントリーポイントを実行したときに、必要となる最低限のclassのみjarにまとめたい。gradleなどにはこの機能はあるが、jarコマンドにはデフォルトでそのような機能はないらしい。しかたないので、`$CLASS_PATH`にあるclassをすべて`$RUNNER_BUILD_PATH/jar/`に展開して、エントリーポイントとなるrunの引数のclassも配置して、Manifestにエントリーポイントとしてrunの引数のclassを記述して、jarにまとめる。
 
 　あとは、jarを
@@ -100,8 +103,10 @@ $ java -cp $CLASSPATH:$RUNNER_BUILD_PATH A
 を実行するようにする。$CLASSPATHには$BUILD_PATH/dist/handmade/lib/java/lib_java_handmade.jarも入っているので問題ない。
 
 　-lで`$BUILD_PATH/dist/handmade/lib/java/lib_java_handmade.jar`を作成するようにする。
-`$RUNNER_JAVA_LIB_PATH ($DPATH/software/handmade/java/library_java_handmade)`
-`$RUNNER_LIB_JAR_PATH ($BUILD_PATH/dist/handmade/lib/java)`
+
+- `$RUNNER_JAVA_LIB_PATH ($DPATH/software/handmade/java/library_java_handmade)`
+- `$RUNNER_LIB_JAR_PATH ($BUILD_PATH/dist/handmade/lib/java)`
+
 に対して、
 ```shell
 $ safety_remover.py $RUNNER_BUILD_PATH/jar
@@ -114,17 +119,17 @@ $ jar cf $RUNNER_LIB_JAR_PATH/lib_java_handmade.jar -C $RUNNER_BUILD_PATH/jar ./
 ```
 で生成する。
 
-$1: "~/inbox/A.java"
-$(basename ${1%.java}): "A"
+- $1: "~/inbox/A.java"
+- $(basename ${1%.java}): "A"
 
 #### 必要な環境変数
-`$RUNNER_JAVA_LIB_PATH ($DPATH/software/handmade/java/library_java_handmade)`
+- `$RUNNER_JAVA_LIB_PATH ($DPATH/software/handmade/java/library_java_handmade)`
 
-`$RUNNER_BUILD_PATH ($BUILD_PATH/build/handmade)`
+- `$RUNNER_BUILD_PATH ($BUILD_PATH/build/handmade)`
 
-`$RUNNER_BIN_PATH ($BUILD_PATH/dist/handmade/bin)`
-`$RUNNER_LIBEXEC_PATH ($BUILD_PATH/dist/handmade/libexec)`
-`$RUNNER_LIB_JAR_PATH ($BUILD_PATH/dist/handmade/lib/java)`
+- `$RUNNER_BIN_PATH ($BUILD_PATH/dist/handmade/bin)`
+- `$RUNNER_LIBEXEC_PATH ($BUILD_PATH/dist/handmade/libexec)`
+- `$RUNNER_LIB_JAR_PATH ($BUILD_PATH/dist/handmade/lib/java)`
 
 
 
@@ -133,20 +138,21 @@ $(basename ${1%.java}): "A"
 
 　日付確認して更新がなければスキップする機能をライブラリcppで実装したい。
 
-$1: "~/inbox/matpri.cpp"
-${1%.cpp}: "~/inbox/matpri"
-$(basename ${1%.cpp}): "matpri"
-　というように変換していることに注意。"${!i}"についてはbash.mdの間接展開参照。
+
+- $1: "~/inbox/matpri.cpp"
+- ${1%.cpp}: "~/inbox/matpri"
+- $(basename ${1%.cpp}): "matpri"
+
+というように変換していることに注意。"${!i}"についてはbash.mdの間接展開参照。
 
 #### 必要な環境変数
-`$RUNNER_CPP_LIBHPP_PATH ($DPATH/software/handmade/cpp/library_cpp_handmade)`
-`$RUNNER_CPP_LIBCPP_PATH ($DPATH/software/handmade/cpp/library_cpp_handmade)`
+- `$RUNNER_CPP_LIBHPP_PATH ($DPATH/software/handmade/cpp/library_cpp_handmade)`
+- `$RUNNER_CPP_LIBCPP_PATH ($DPATH/software/handmade/cpp/library_cpp_handmade)`
 
-`$RUNNER_BUILD_PATH ($BUILD_PATH/build/handmade)`
+- `$RUNNER_BUILD_PATH ($BUILD_PATH/build/handmade)`
 
-`$RUNNER_BIN_PATH ($BUILD_PATH/dist/handmade/bin)`
-`$RUNNER_INCLUDE_PATH ($BUILD_PATH/dist/handmade/include)`
-`$RUNNER_LIB_PATH ($BUILD_PATH/dist/handmade/lib)`
-
+- `$RUNNER_BIN_PATH ($BUILD_PATH/dist/handmade/bin)`
+- `$RUNNER_INCLUDE_PATH ($BUILD_PATH/dist/handmade/include)`
+- `$RUNNER_LIB_PATH ($BUILD_PATH/dist/handmade/lib)`
 
 
